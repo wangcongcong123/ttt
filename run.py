@@ -17,9 +17,9 @@ if __name__ == '__main__':
     logger.info(f"args: {json.dumps(args.__dict__, indent=2)}")
     # args.do_train = True
     # args.do_eval = True
-    args.do_test = True
+    # args.do_test = True
     # args.use_tpu = False
-    args.use_gpu = True
+    # args.use_gpu = True
     sanity_check(args)
 
     if args.do_train:

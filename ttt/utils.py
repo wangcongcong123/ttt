@@ -101,19 +101,17 @@ def create_model(args, logger, model_getter):
             # logger.info("Using CPU for training")
             # model = model_getter(args)
     logger.info(model.summary())
-    trainable_count = int(
-        np.sum([K.count_params(p) for p in set(model.trainable_weights)]))
-    non_trainable_count = int(
-        np.sum([K.count_params(p) for p in set(model.non_trainable_weights)]))
-    logger.info('Total params: {:,}'.format(trainable_count + non_trainable_count))
-    logger.info('Trainable params: {:,}'.format(trainable_count))
-    logger.info('Non-trainable params: {:,}'.format(non_trainable_count))
+    # trainable_count = int(
+    #     np.sum([K.count_params(p) for p in set(model.trainable_weights)]))
+    # non_trainable_count = int(
+    #     np.sum([K.count_params(p) for p in set(model.non_trainable_weights)]))
+    # logger.info('Total params: {:,}'.format(trainable_count + non_trainable_count))
+    # logger.info('Trainable params: {:,}'.format(trainable_count))
+    # logger.info('Non-trainable params: {:,}'.format(non_trainable_count))
 
-    if strategy!=None:
-        args.num_replicas_in_sync = strategy.num_replicas_in_sync
-
+    # if strategy!=None:
+    args.num_replicas_in_sync = strategy.num_replicas_in_sync
     write_args(args.output_path, args)
-
     return model, strategy
 
 

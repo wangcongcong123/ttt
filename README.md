@@ -1,4 +1,3 @@
-
 <p align="center">
     <br>
     <img src="ttt_logo.png" width="400"/>
@@ -7,7 +6,7 @@
 
 ## TTT: Fine-tuning Transformers with TPUs or GPUs acceleration, written in Tensorflow2.0+
 
-**TTT** is short for a package for fine-tuning **T**ransformers with **T**PUs, written in **T**ensorflow2.0+
+**TTT** is short for a package for fine-tuning **T**ransformers with **T**PUs, written in **T**ensorflow2.0+. It is motivated to be completed due to bugs I found tricky to solve when using the xla library with PyTorch. As a newcomer to the TF world, I am humble to learn more from the community and hence it is open sourced here.
 
 ## Demo
 The following demonstrates the example of fine-tuning T5-small for sst2 ([example_t5.py](example_t5.py)).
@@ -23,16 +22,18 @@ The following demonstrates the example of fine-tuning T5-small for sst2 ([exampl
 - Using pretrained tensorflow weights from the open-source library - [🤗 transformers](https://github.com/huggingface/transformers).
 - Fine-tuning BERT-like transformers (DistilBert, ALBERT, Electra, RoBERTa) using keras High-level API.
 - Fine-tuning T5-like transformers using customize training loop, written in tensorflow.
-- So far, this package mainly supports single-sequence classificaton based tasks. However, this can be easily extended to support more language tasks.
+- So far, this package mainly supports single-sequence classificaton based tasks. However, this can be easily extended to support other language tasks.
 
 ## Quickstart
 
 #### Prepare
 ```shell
-git clone pip3+https://github.com/wangcongcong123/ttt.git
+git clone https://github.com/wangcongcong123/ttt.git
+cd ttt
+pip install -e .
 ```
 
-#### Example of fine-tuning T5 for sst2 ([example_bert.py](example_bert.py))
+#### Example of fine-tuning BERT for sst2 ([example_bert.py](example_bert.py))
 ```python3
 from ttt import *
 
@@ -56,7 +57,7 @@ if __name__ == '__main__':
     args.scheduler="warmuplinear"
     # set do_eval = False if your data does not contain a validation set. In that case, patience, and early_stop will be invalid
     args.do_eval = True
-    args.tpu_address = "x.x.x.x"
+    args.tpu_address = "x.x.x.x" # replace with yours
     ############### end customize args
     # to have a sanity check for the args
     sanity_check(args)
@@ -81,7 +82,7 @@ Google Colab Notebooks for demonstrating some examples.
 
 ## Command lines direct-to-go
 
-This has to be run in Google GCP VM instance since the tpu_address is internal IP from Google (or change `--use_tpu` to `use_gpu` if you have enough GPUs). The flag `--tpu_address` should be replaced with yours. * These runs are run with a set of "look-good" hyper-parameters but not exhaustively selected.
+This has to be run in Google GCP VM instance since the tpu_address is internal IP from Google (or change `--use_tpu` to `use_gpu` if you have enough GPUs). The flag `--tpu_address` should be replaced with yours. Notice: these runs are run with a set of "look-good" hyper-parameters but not exhaustively selected.
 
 #### Experiment BERT on sst2 using TPUv2-8
 
@@ -96,13 +97,13 @@ C-1-2:
 python3 run.py --model_select bert-large-uncased --data_path data/glue/sst2 --task single-label-cls --per_device_train_batch_size 8 --num_epochs_train 6 --max_seq_length 128 --lr 5e-5 --schedule warmuplinear --do_train --do_eval --do_test --use_tpu --tpu_address x.x.x.x
 ```
 
-** In addition, on TPUv2-8, when `per_device_train_batch_size` is 128 (batch size=8*128=1024), this first epoch takes around ~1 minute and the rest of each takes just ~15 seconds!. That is fast but the sst2 accuracy goes down significantly.
+** In addition, experiments on larger batch sizes were also conducted on TPUv2-8. For example, when `per_device_train_batch_size` is 128 (batch size=8*128=1024), this first epoch takes around ~1 minute and the rest of each takes just ~15 seconds! That is fast but the sst2 accuracy goes down significantly.
 
 #### Results
 
 |             | bert-base-uncased   (110M) |                                                |                             |                                 | bert-large-uncased   (340M) |                                                |                             |                                 |
 |-------------|:--------------------------:|:----------------------------------------------:|:---------------------------:|---------------------------------|:---------------------------:|:----------------------------------------------:|:---------------------------:|---------------------------------|
-|             | here                       | [BERT paper](https://arxiv.org/abs/1810.04805) | reproduction (here) command | time spent on a n1-standard-8 * | here                        | [BERT paper](https://arxiv.org/abs/1810.04805) | reproduction (here) command | time spent on a n1-standard-8 * |
+|             | here                       | [BERT paper](https://arxiv.org/abs/1810.04805) | reproduction (here) command | time spent on a [n1-standard-8](https://cloud.google.com/compute/docs/machine-types) * | here                        | [BERT paper](https://arxiv.org/abs/1810.04805) | reproduction (here) command | time spent on a [n1-standard-8](https://cloud.google.com/compute/docs/machine-types) * |
 | sst2 (acc.) | 93.36                      | 93.5                                           | C-1-1                       | 16 minutes                      | 94.45                       | 94.9                                           | C-1-2                       | 37 minutes                      |
 * *refer to the estimated time including training, every 400 steps evaluation and evaluation on testing.
 * Looks good, the results are close the original reported results.
@@ -128,7 +129,7 @@ python3 run.py --model_select t5-large --data_path data/glue/sst2 --task t2t --p
 
 |             | t5-small (60M) |                                              |                             |                                 | t5-base (220M) |                                              |                             |                                 |
 |-------------|:--------------:|:--------------------------------------------:|:---------------------------:|---------------------------------|:--------------:|:--------------------------------------------:|:---------------------------:|---------------------------------|
-|             | here           | [T5 paper](https://arxiv.org/abs/1910.10683) | reproduction (here) command | time spent on a n1-standard-8 * | here           | [T5 paper](https://arxiv.org/abs/1910.10683) | reproduction (here) command | time spent on a n1-standard-8 * |
+|             | here           | [T5 paper](https://arxiv.org/abs/1910.10683) | reproduction (here) command | time spent on a [n1-standard-8](https://cloud.google.com/compute/docs/machine-types) * | here           | [T5 paper](https://arxiv.org/abs/1910.10683) | reproduction (here) command | time spent on a [n1-standard-8](https://cloud.google.com/compute/docs/machine-types) * |
 | sst2 (acc.) | 90.12          | 91.8                                         | C-2-1                       | 20 minutes                      | 94.18          | 95.2                                         | C-2-2                       | 36 minutes                      |
 
 * *refer to the estimated time including training, every 400 steps evaluation and evaluation on testing.
@@ -148,3 +149,6 @@ python3 run.py --model_select t5-large --data_path data/glue/sst2 --task t2t --p
 I have been looking for PyTorch alternatives that can help train large models with Google's TPUs in Google's GCP VM instance env. Although the [xla](https://github.com/pytorch/xla) lib seems good, I gave it up due to some bugs I found hard to fix. Something like "process terminated with SIGKILL" confused me a lot, and took me loads of time, and eventually fail to solve after searching all kinds of answers online ([ref1](https://github.com/PyTorchLightning/pytorch-lightning/issues/1590), [ref2](https://github.com/huggingface/transformers/issues/3660), the community looks not that active in this field). Later on, some clues online tell me this is something related to memory overloading and I expect the xla lib will be more stable release in the future. It works well when being experimented with [the MNIST example](https://cloud.google.com/tpu/docs/tutorials/mnist) provided in Google's official website but comes up the "memory" problem when tested on big models like transformers (I did not make this transformers' [xla_spawn.py](https://github.com/huggingface/transformers/blob/master/examples/xla_spawn.py) run successful either).
 
 Hence, I shift to learn Tensorflow as a newcomer from PyTorch to make my life easy whenever I feel needed to train a model on TPUs. Thankfully, Tensorflow-2.0 makes this shift not that difficult although some [complains](https://twitter.com/snrrrub/status/1301228252325797888) on it always go on. After around three days of researching and coding, I end up with this simple package. This package is made public-available in hope of helping whoever has the same encountering as me. Most of the training code (so-called boilerplate codes) flow in this package looks a style of PyTorch due to my old habit. Hopefully, this makes it easy to know Tensorflow-2.0 when you are from PyTorch and you need TPUs. 
+
+### Ack.
+Thanks for [Google's TFRC Program](https://www.tensorflow.org/tfrc) giving TPUs credits to make this possible.

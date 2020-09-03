@@ -14,12 +14,7 @@ TASKS_SUPPORT = ["single-label-cls", "t2t"]
 # in the future, more schedulers will be added, such as warmupconstant, warmupcosine, etc.
 LR_SCHEDULER_SUPPORT = ["warmuplinear", "warmupconstant", "constant"]
 
-class Args:
-    use_tpu = False
 
-    def __init__(self, **kwargs):
-        for k, v in kwargs.items():
-            setattr(self, k, v)
 
 def data_check(args, sample_val_from_train=True, val_sample_portion=0.1):
 
@@ -111,6 +106,39 @@ def sanity_check(args):
 
     if "t5" not in args.model_select:
         assert "t2t" not in args.task, "BERT-like models (--model_select) only support non t2t tasks (--task)"
+
+class Args:
+    '''
+    a Args class that maintain the same default args as argparse.ArgumentParser
+    '''
+    model_select="bert-base-uncased"
+    data_path="data/glue/sst2"
+    task="single-label-cls"
+    per_device_train_batch_size=8
+    eval_batch_size=32
+    num_epochs_train=6
+    log_steps=400
+    max_seq_length=128
+    max_src_length=128
+    max_tgt_length=20
+    lr=5e-5
+    warmup_ratio=0.1
+    patience=20
+    scheduler="warmuplinear"
+    seed=122
+    eval_on="acc"
+    keep_ck_num=3
+    ck_index_select=0
+    do_train=False
+    do_eval=False
+    do_test=False
+    use_gpu=False
+    use_tpu=False
+    use_tb=False
+    tpu_address="x.x.x.x"
+    def __init__(self, **kwargs):
+        for k, v in kwargs.items():
+            setattr(self, k, v)
 
 
 def get_args():
