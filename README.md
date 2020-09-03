@@ -15,7 +15,7 @@
 
 ## TTT: Fine-tuning Transformers with TPUs or GPUs acceleration, written in Tensorflow2.0+
 
-**TTT** is short for a package for fine-tuning **T**ransformers with **T**PUs, written in **T**ensorflow2.0+. It is motivated to be completed due to bugs I found tricky to solve when using the xla library with PyTorch. As a newcomer to the TF world, I am humble to learn more from the community and hence it is open sourced here.
+**TTT** is short for a package for fine-tuning 🤗 **T**ransformers with **T**PUs, written in **T**ensorflow2.0+. It is motivated to be completed due to bugs I found tricky to solve when using [the xla library](https://github.com/pytorch/xla) with PyTorch. As a newcomer to the TF world, I am humble to learn more from the community and hence it is open sourced here.
 
 ## Demo 
  [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/googlecolab/colabtools/blob/master/notebooks/colab-github-demo.ipynb)
@@ -33,7 +33,7 @@ The following demonstrates the example of fine-tuning T5-small for sst2 ([exampl
 - Using pretrained tensorflow weights from the open-source library - [🤗 transformers](https://github.com/huggingface/transformers).
 - Fine-tuning BERT-like transformers (DistilBert, ALBERT, Electra, RoBERTa) using keras High-level API.
 - Fine-tuning T5-like transformers using customize training loop, written in tensorflow.
-- So far, this package mainly supports single-sequence classificaton based tasks. However, this can be easily extended to support other language tasks.
+- So far, this package mainly supports single-sequence classificaton based tasks. However, it can be easily extended to support other language tasks.
 
 ## Quickstart
 
@@ -167,7 +167,7 @@ python3 run.py --model_select t5-large --data_path data/glue/sst2 --task t2t --p
 
 ## Last
 
-I have been looking for PyTorch alternatives that can help train large models with Google's TPUs in Google's GCP VM instance env. Although the [xla](https://github.com/pytorch/xla) lib seems good, I gave it up due to some bugs I found hard to fix. Something like "process terminated with SIGKILL" confused me a lot, and took me loads of time, and eventually fail to solve after searching all kinds of answers online ([ref1](https://github.com/PyTorchLightning/pytorch-lightning/issues/1590), [ref2](https://github.com/huggingface/transformers/issues/3660), the community looks not that active in this field). Later on, some clues online tell me this is something related to memory overloading and I expect the xla lib will be more stable release in the future. It works well when being experimented with [the MNIST example](https://cloud.google.com/tpu/docs/tutorials/mnist) provided in Google's official website but comes up the "memory" problem when tested on big models like transformers (I did not make this transformers' [xla_spawn.py](https://github.com/huggingface/transformers/blob/master/examples/xla_spawn.py) run successful either).
+I have been looking for PyTorch alternatives that can help train large models with Google's TPUs in Google's GCP VM instance env. Although the [xla](https://github.com/pytorch/xla) lib seems good, I gave it up due to some bugs I found hard to fix. Something like "process terminated with SIGKILL" confused me a lot, and took me loads of time, and eventually fail to solve after searching all kinds of answers online ([ref1](https://github.com/PyTorchLightning/pytorch-lightning/issues/1590), [ref2](https://github.com/huggingface/transformers/issues/3660), the community looks not that active in this field). Later on, some clues online tell me this problem is something related to memory overloading and I expect the xla lib will be more stable release in the future. It works well when being experimented with [the MNIST example](https://cloud.google.com/tpu/docs/tutorials/mnist) provided in Google's official website but comes up the "memory" problem when tested on big models like transformers (I did not make this 🤗 transformers' [xla_spawn.py](https://github.com/huggingface/transformers/blob/master/examples/xla_spawn.py) run successful either).
 
 Hence, I shift to learn Tensorflow as a newcomer from PyTorch to make my life easy whenever I feel needed to train a model on TPUs. Thankfully, Tensorflow-2.0 makes this shift not that difficult although some [complains](https://twitter.com/snrrrub/status/1301228252325797888) on it always go on. After around three days of researching and coding, I end up with this simple package. This package is made public-available in hope of helping whoever has the same encountering as me. Most of the training code (so-called boilerplate codes) flow in this package looks a style of PyTorch due to my old habit. Hopefully, this makes it easy to know Tensorflow-2.0 when you are from PyTorch and you need TPUs. 
 
