@@ -1,0 +1,7 @@
+venv/
+data/
+runs/
+tmp/
+exps/
+.idea/
+wandb/
