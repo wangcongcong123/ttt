@@ -26,6 +26,9 @@ The following demonstrates the example of fine-tuning T5-small for sst2 ([exampl
 <!-- 
 * This can be scaled to t5-large, t5-large, or even 3B if a 8-cores TPU is available. For GPUs, this fine-tuning is tested on T5-large in a server of 4 12-GB GTX-1080s even with per_device_train_batch_size=2, leading to a out-of-memory exception (OOM).
 -->
+
+
+
 ## Features
 - Switch between TPUs and GPUs easily.
 - Stable training on TPUs.
