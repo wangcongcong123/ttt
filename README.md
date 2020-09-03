@@ -13,9 +13,6 @@
     <br>
 <p>
 
-## TTT: Fine-tuning Transformers with TPUs or GPUs acceleration, written in Tensorflow2.0+
-
-**TTT** is short for a package for fine-tuning 🤗 **T**ransformers with **T**PUs, written in **T**ensorflow2.0+. It is motivated to be completed due to bugs I found tricky to solve when using [the xla library](https://github.com/pytorch/xla) with PyTorch. As a newcomer to the TF world, I am humble to learn more from the community and hence it is open sourced here.
 
 ## Demo 
  [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/googlecolab/colabtools/blob/master/notebooks/colab-github-demo.ipynb)
@@ -26,6 +23,11 @@ The following demonstrates the example of fine-tuning T5-small for sst2 ([exampl
 <!-- 
 * This can be scaled to t5-large, t5-large, or even 3B if a 8-cores TPU is available. For GPUs, this fine-tuning is tested on T5-large in a server of 4 12-GB GTX-1080s even with per_device_train_batch_size=2, leading to a out-of-memory exception (OOM).
 -->
+
+## TTT: Fine-tuning Transformers with TPUs or GPUs acceleration, written in Tensorflow2.0+
+
+**TTT** is short for a package for fine-tuning 🤗 **T**ransformers with **T**PUs, written in **T**ensorflow2.0+. It is motivated to be completed due to bugs I found tricky to solve when using [the xla library](https://github.com/pytorch/xla) with PyTorch. As a newcomer to the TF world, I am humble to learn more from the community and hence it is open sourced here.
+
 ## Features
 - Switch between TPUs and GPUs easily.
 - Stable training on TPUs.
