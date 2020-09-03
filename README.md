@@ -4,11 +4,22 @@
     <br>
 <p>
 
+<p align="center">
+    <br>
+    <img src="https://img.shields.io/github/issues/wangcongcong123/ttt"/>
+    <img src="https://img.shields.io/github/forks/wangcongcong123/ttt"/>
+     <img src="https://img.shields.io/github/stars/wangcongcong123/ttt"/>
+     <img src="https://img.shields.io/github/license/wangcongcong123/ttt"/>
+    <br>
+<p>
+
 ## TTT: Fine-tuning Transformers with TPUs or GPUs acceleration, written in Tensorflow2.0+
 
 **TTT** is short for a package for fine-tuning **T**ransformers with **T**PUs, written in **T**ensorflow2.0+. It is motivated to be completed due to bugs I found tricky to solve when using the xla library with PyTorch. As a newcomer to the TF world, I am humble to learn more from the community and hence it is open sourced here.
 
-## Demo
+## Demo 
+ [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/googlecolab/colabtools/blob/master/notebooks/colab-github-demo.ipynb)
+ 
 The following demonstrates the example of fine-tuning T5-small for sst2 ([example_t5.py](example_t5.py)).
 
 ![](ttt_demo.png)
@@ -77,8 +88,18 @@ if __name__ == '__main__':
     )
 ```
 
-## Notebooks
-Google Colab Notebooks for demonstrating some examples. 
+So far the package has included the following supports for `args.model_select`, `args.task` and `args.scheduler` ([args.py](ttt/args.py)).
+
+```python3
+# these have been tested and work fine. more can be added to this list to test
+MODELS_SUPPORT = ["distilbert-base-cased","bert-base-uncased", "bert-large-uncased", "google/electra-base-discriminator",
+                  "google/electra-large-discriminator", "albert-base-v2", "roberta-base",
+                  "t5-small","t5-base"]
+# if using t5 models, the tasks has to be t2t* ones
+TASKS_SUPPORT = ["single-label-cls", "t2t"]
+# in the future, more schedulers will be added, such as warmupconstant, warmupcosine, etc.
+LR_SCHEDULER_SUPPORT = ["warmuplinear", "warmupconstant", "constant"]
+```
 
 ## Command lines direct-to-go
 
