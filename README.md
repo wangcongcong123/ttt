@@ -127,7 +127,7 @@ python3 run.py --model_select bert-large-uncased --data_path data/glue/sst2 --ta
 |             | here                       | [BERT paper](https://arxiv.org/abs/1810.04805) | reproduction (here) command | time spent on a [n1-standard-8](https://cloud.google.com/compute/docs/machine-types) * | here                        | [BERT paper](https://arxiv.org/abs/1810.04805) | reproduction (here) command | time spent on a [n1-standard-8](https://cloud.google.com/compute/docs/machine-types) * |
 | sst2 (acc.) | 93.36                      | 93.5                                           | C-1-1                       | 16 minutes                      | 94.45                       | 94.9                                           | C-1-2                       | 37 minutes                      |
 * *refer to the estimated time including training, every 400 steps evaluation and evaluation on testing.
-* Looks good, the results are close the original reported results.
+* Looks good, the results are close to the original reported results.
 
 ### Experiment T5 on sst2 using TPUv2-8
 
@@ -154,7 +154,7 @@ python3 run.py --model_select t5-large --data_path data/glue/sst2 --task t2t --p
 | sst2 (acc.) | 90.12          | 91.8                                         | C-2-1                       | 20 minutes                      | 94.18          | 95.2                                         | C-2-2                       | 36 minutes                      |
 
 * *refer to the estimated time including training, every 400 steps evaluation and evaluation on testing.
-* Looks good, the results are close the original reported results.
+* Looks not bad, the results are a bit close to the original reported results.
 
 
 ## Contributions
