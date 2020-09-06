@@ -53,6 +53,7 @@ pip install -e .
 # any one from MODELS_SUPPORT (check:ttt/args.py)
 args.model_select = "t5-small"
 # the path to the translation dataset, each line represents an example in jsonl format like: {"target": "...", "source","..."}
+# it will download automatically for the frist time from: https://s3.amazonaws.com/datasets.huggingface.co/translation/wmt_en_ro.tar.gz
 args.data_path = "data/wmt_en_ro"
 # any one from TASKS_SUPPORT (check:ttt/args.py)
 args.task = "translation"
