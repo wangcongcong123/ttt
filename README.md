@@ -48,7 +48,7 @@ pip install -e .
 #### Update (2020-09-06): Example of fine-tuning T5 for translation ([example_trans_t5.py](example_trans_t5.py))
 
 <a name="wmt_en_ro_t5"></a>
-**Fine-tuning**: No boilerplate codes changed (the same as [example_bert](example_bert.py)) but the following args:
+**Fine-tuning**: No boilerplate codes changed (the same as [example_bert](example_bert.py)) except for the following args:
 ```python3
 # any one from MODELS_SUPPORT (check:ttt/args.py)
 args.model_select = "t5-small"
