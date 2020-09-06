@@ -5,19 +5,21 @@ if __name__ == '__main__':
     # check what args are available and their default values
     logger.info(f"args: {json.dumps(args.__dict__, indent=2)}")
     ############### customize args
-    # args.use_gpu = True
-    args.use_tpu = True
+    args.use_gpu = True
+    # args.use_tpu = True
     args.do_train = True
     args.use_tb = True
     # any one from MODELS_SUPPORT (check:ttt/args.py)
     args.model_select = "t5-small"
-    # select a dataset. First check if  it is from nlp, if yes load it here and save locally to the data_path
-    # or customize a data in the data_path (train.json, val.json, test.json) where examples are organised in jsonl format
-    # each line represents an example like this: {"text": "...", "label","..."}
-    args.data_path = "data/glue/sst2"
+    # the path to the translation dataset, each line represents an example in jsonl format like: {"target": "...", "source","..."}
+    args.data_path = "data/wmt_en_ro"
     # any one from TASKS_SUPPORT (check:ttt/args.py)
-    args.task = "t2t"
-    args.log_steps = 400
+    args.task = "translation"
+    args.max_src_length=128
+    args.max_tgt_length=128
+    args.source_field_name="source"
+    args.target_field_name="target"
+    args.eval_on="bleu" #this refers to sacrebleu as used in T5 paper
     # any one from LR_SCHEDULER_SUPPORT (check:ttt/args.py)
     args.scheduler = "warmuplinear"
     # set do_eval = False if your data does not contain a validation set. In that case, patience, and early_stop will be invalid

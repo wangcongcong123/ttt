@@ -1,4 +1,3 @@
-
 from ttt.inputs import *
 from ttt.utils import *
 from ttt.args import *

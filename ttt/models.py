@@ -73,7 +73,7 @@ def create_t2t_model(model_name_or_path, args):
 def get_model(args):
     if args.task == "single-label-cls":
         return create_sl_cls_model(args.model_select, args.input_seq_length, args)
-    elif args.task == "t2t":
+    elif args.task == "t2t" or args.task=="translation":
         return create_t2t_model(args.model_select, args)
     else:
         # when more task are supported -> todo

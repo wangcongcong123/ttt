@@ -1,4 +1,3 @@
-
 ''''
 this is a customize trainer for T5-like mode training,
 in this class, the training loop is customized for more flexibility and control over
@@ -23,16 +22,22 @@ logger = logging.getLogger(__name__)
 from ttt.utils import add_filehandler_for_logger, get_existing_cks
 
 from tensorboardX import SummaryWriter
+# for translation evaluation from: https://github.com/mjpost/sacrebleu
+# which is also used in the original T5 paper
+import sacrebleu
+
 
 class T2TTrainer():
     def __init__(self, args):
         self.eval_on = args.eval_on
-        assert self.eval_on in ["acc"],"now t2t training only supports --eval_on acc "
+        assert self.eval_on in ["acc", "bleu"], "now t2t training only supports --eval_on acc, bleu "
         self.best = -np.Inf
+
+        # score = bleu_metric.compute(preds, gts)
         self.patience = args.patience
         self.wait = 0
         self.args = args
-        self.use_tb=self.args.use_tb
+        self.use_tb = self.args.use_tb
         if self.use_tb:
             self._tb_writer = SummaryWriter(log_dir=os.path.join("runs", args.output_folder))
 
@@ -41,7 +46,7 @@ class T2TTrainer():
         self.warmup_ratio = args.warmup_ratio
         add_filehandler_for_logger(args.output_path, logger)
 
-    def save_ck(self, model,steps, tag="epoch", best_ck=False):
+    def save_ck(self, model, steps, tag="epoch", best_ck=False):
         sorted_indices, index2path = get_existing_cks(self.args.output_path, best_ck=best_ck)
 
         if len(sorted_indices) >= self.args.keep_ck_num:
@@ -124,28 +129,44 @@ class T2TTrainer():
                 assert tag in ["epoch", "global_step"]
                 gts = []
                 preds = []
+
                 for inputs in tqdm(val_dataset, total=val_length, desc="evaluating..."):
                     predictions = model.generate(input_ids=inputs[0],
                                                  attention_mask=inputs[1],
                                                  max_length=self.args.max_tgt_length)
+                    pred = [tokenizer.decode(ids) for ids in predictions]
+                    gt = [tokenizer.decode(ids) for ids in inputs[-1]]
 
-                    preds.extend([tokenizer.decode(ids) for ids in predictions])
-                    gts.extend([tokenizer.decode(ids) for ids in inputs[-1]])
+                    preds.extend(pred)
+                    gts.extend(gt)
 
-                acc = accuracy_score(gts, preds)
+                if self.eval_on == "bleu":
+                    # bleu = 0
+                    bleu = sacrebleu.corpus_bleu(preds, [gts])
+                    eval_score=bleu.score
+                    # for pred, gt in zip(preds, gts):
+                        # by default, we calculate 4-gram belu only
+                        # the reason why the bleu metric from nlp lib not used here is an error when using nlp's bleu_metric.compute(...,...):
+                        # "The requested operation cannot be performed on a file with a user-mapped section open.", Hence, temporarily, we use nltk's impl. for now
+                        # bleu += nltk.translate.bleu_score.sentence_bleu([gt.split()], pred.split())
+                    # eval_score = bleu / len(gts)
+                else:
+                    eval_score = accuracy_score(gts, preds)
+                    logger.info(f"val_cls_report: {classification_report(gts, preds, digits=4)}")
+
                 if self.use_tb:
-                    self._tb_writer.add_scalar(f"val_acc_{tag}", acc, steps)
+                    self._tb_writer.add_scalar(f"val_{self.eval_on}_{tag}", eval_score, steps)
+
                 logger.info("\n")
                 logger.info(f"*******eval at {tag} = {steps} on validation dataset*********")
-                logger.info(f"val_acc: {acc}")
-                logger.info(f"val_cls_report: {classification_report(gts, preds, digits=4)}")
+                logger.info(f"val_{self.eval_on}: {eval_score}")
 
-                if self.eval_on == "acc":
-                    if acc >= self.best:
+                if self.eval_on == "acc" or self.eval_on == "bleu":
+                    if eval_score >= self.best:
                         self.wait = 0
-                        self.best = acc
+                        self.best = eval_score
                         logger.info(f"so far the best check point at {tag}={steps} based on eval_on {self.eval_on}")
-                        self.save_ck(model,steps, tag, best_ck=True)
+                        self.save_ck(model, steps, tag, best_ck=True)
                     else:
                         self.wait += 1
                 else:
@@ -153,7 +174,7 @@ class T2TTrainer():
 
                 logger.info(f"best so far({self.eval_on}): {self.best}")
                 logger.info(f"early stop count: {self.wait}/{self.patience}")
-                self.save_ck(model,steps, tag)
+                self.save_ck(model, steps, tag)
                 if self.wait >= self.patience:
                     logger.info("run out of patience, early stop")
                     if self.use_tb:
@@ -202,7 +223,8 @@ class T2TTrainer():
 
                     if self.args.log_steps != -1 and global_step % self.args.log_steps == 0:
                         if self.use_tb:
-                            self._tb_writer.add_scalar("train_loss_global_step", epoch_total_loss / num_batches, global_step)
+                            self._tb_writer.add_scalar("train_loss_global_step", epoch_total_loss / num_batches,
+                                                       global_step)
                             self._tb_writer.add_scalar("train_lr_global_step", optimizer.lr.numpy(), global_step)
 
                         if self.args.do_eval:
@@ -221,7 +243,7 @@ class T2TTrainer():
                     logger.info(f"train loss at end of epoch {epoch}: {train_loss}")
 
                 if not self.args.do_eval:
-                    #if do not do evaluate, the checkpoint at the end of epoch needs to be saved
-                    self.save_ck(model,epoch, tag="epoch")
+                    # if do not do evaluate, the checkpoint at the end of epoch needs to be saved
+                    self.save_ck(model, epoch, tag="epoch")
             if self.use_tb:
                 self._tb_writer.close()

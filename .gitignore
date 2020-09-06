@@ -5,3 +5,5 @@ tmp/
 exps/
 .idea/
 wandb/
+__pycache__/
+ttt/__pycache__/

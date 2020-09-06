@@ -23,6 +23,7 @@ setup(
         "keras",
         "tensorboardX",
         "nlp",
+        "sacrebleu",
         "transformers"
     ],
     classifiers=[

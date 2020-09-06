@@ -116,13 +116,8 @@ def create_model(args, logger, model_getter):
 
 
 def get_tokenizer(args):
-    if args.task == "qa":
-        slow_tokenizer = BertTokenizer.from_pretrained(args.model_select)
-        slow_tokenizer.save_pretrained(args.output_path)
-        tokenizer = BertWordPieceTokenizer(os.path.join(args.output_path, "vocab.txt"), lowercase=True)  # slow
-    else:
-        tokenizer = AutoTokenizer.from_pretrained(args.model_select)
-        tokenizer.save_pretrained(args.output_path)
+    tokenizer = AutoTokenizer.from_pretrained(args.model_select)
+    tokenizer.save_pretrained(args.output_path)
     return tokenizer
 
 

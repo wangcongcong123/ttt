@@ -44,6 +44,25 @@ cd ttt
 pip install -e .
 ```
 
+
+#### Update (2020-09-06): Example of fine-tuning T5 for translation ([example_trans_t5.py](example_trans_t5.py))
+
+<a name="wmt_en_ro_t5"></a>
+**Fine-tuning**: No boilerplate codes changed (the same as [example_bert](example_bert.py)) but the following args:
+```python3
+# any one from MODELS_SUPPORT (check:ttt/args.py)
+args.model_select = "t5-small"
+# the path to the translation dataset, each line represents an example in jsonl format like: {"target": "...", "source","..."}
+args.data_path = "data/wmt_en_ro"
+# any one from TASKS_SUPPORT (check:ttt/args.py)
+args.task = "translation"
+args.max_src_length=128
+args.max_tgt_length=128
+args.source_field_name="source"
+args.target_field_name="target"
+args.eval_on="bleu" #this refers to sacrebleu as used in T5 paper
+```
+
 #### Example of fine-tuning BERT for sst2 ([example_bert.py](example_bert.py))
 ```python3
 from ttt import *
@@ -173,3 +192,5 @@ Hence, I shift to learn Tensorflow as a newcomer from PyTorch to make my life ea
 
 ### Ack.
 Thanks for [Google's TFRC Program](https://www.tensorflow.org/tfrc) giving TPUs credits to make this possible.
+
+I worte the following package in hope of helping whoever is seeking for the solutions to TPUs training with TF2.0, as I did a week ago and could not find proper solutions. Hence, I built something from scratch shared here #nlp #tpu #transformers: https://github.com/wangcongcong123/ttt
