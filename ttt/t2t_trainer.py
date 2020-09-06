@@ -144,12 +144,6 @@ class T2TTrainer():
                     # bleu = 0
                     bleu = sacrebleu.corpus_bleu(preds, [gts])
                     eval_score=bleu.score
-                    # for pred, gt in zip(preds, gts):
-                        # by default, we calculate 4-gram belu only
-                        # the reason why the bleu metric from nlp lib not used here is an error when using nlp's bleu_metric.compute(...,...):
-                        # "The requested operation cannot be performed on a file with a user-mapped section open.", Hence, temporarily, we use nltk's impl. for now
-                        # bleu += nltk.translate.bleu_score.sentence_bleu([gt.split()], pred.split())
-                    # eval_score = bleu / len(gts)
                 else:
                     eval_score = accuracy_score(gts, preds)
                     logger.info(f"val_cls_report: {classification_report(gts, preds, digits=4)}")
