@@ -162,7 +162,7 @@ python3 run.py --model_select t5-base --data_path data/glue/sst2 --task t2t --pe
 
 C-2-3:
 ```
-python3 run.py --model_select t5-large --data_path data/glue/sst2 --task t2t --per_device_train_batch_size 2 --eval_batch_size 8 --num_epochs_train 6 --max_seq_length 128 --lr 5e-5 --schedule warmuplinear --do_test --use_tpu --tpu_address x.x.x.x 
+python3 run.py --model_select t5-large --data_path data/glue/sst2 --task t2t --per_device_train_batch_size 2 --eval_batch_size 8 --num_epochs_train 6 --max_seq_length 128 --lr 5e-5 --schedule warmuplinear --do_train --do_eval --do_test --use_tpu --tpu_address x.x.x.x 
 ```
 ** failed (out-of-memory) although `per_device_train_batch_size`=2. Does a TPUv2-8 not have enough memory to fine-tune a `t5-large` model? Looking for solutions to fine-tune `t5-large`. **Update:** Later on, I am lucky to get a TPUv3-8 (128G), so it is run successfully.
 
