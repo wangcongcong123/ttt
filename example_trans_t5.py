@@ -27,7 +27,7 @@ if __name__ == '__main__':
     args.scheduler = "warmuplinear"
     # set do_eval = False if your data does not contain a validation set. In that case, patience, and early_stop will be invalid
     args.do_eval = True
-    args.tpu_address = "10.240.1.10"
+    args.tpu_address = "x.x.x.x"
     ############### end customize args
     # to have a sanity check for the args
     sanity_check(args)
