@@ -48,7 +48,7 @@ pip install -e .
 #### Update (2020-09-06): Example of fine-tuning T5 for translation ([example_trans_t5.py](example_trans_t5.py))
 
 <a name="wmt_en_ro_t5"></a>
-**Fine-tuning**: No boilerplate codes changed (the same as [example_bert](example_bert.py)) except for the following args:
+**Fine-tuning**: No boilerplate codes changed (the same as [example_t5](example_t5.py)) except for the following args:
 ```python3
 # any one from MODELS_SUPPORT (check:ttt/args.py)
 args.model_select = "t5-small"
@@ -145,7 +145,7 @@ python3 run.py --model_select bert-large-uncased --data_path data/glue/sst2 --ta
 |             | bert-base-uncased   (110M) |                                                |                             |                                 | bert-large-uncased   (340M) |                                                |                             |                                 |
 |-------------|:--------------------------:|:----------------------------------------------:|:---------------------------:|---------------------------------|:---------------------------:|:----------------------------------------------:|:---------------------------:|---------------------------------|
 |             | here                       | [BERT paper](https://arxiv.org/abs/1810.04805) | reproduction (here) command | time spent on a [n1-standard-8](https://cloud.google.com/compute/docs/machine-types) * | here                        | [BERT paper](https://arxiv.org/abs/1810.04805) | reproduction (here) command | time spent on a [n1-standard-8](https://cloud.google.com/compute/docs/machine-types) * |
-| sst2 (acc.) | 93.36                      | 93.5                                           | C-1-1                       | 16 minutes                      | 94.45                       | 94.9                                           | C-1-2                       | 37 minutes                      |
+| sst2 (test set, acc.) | 93.36                      | 93.5                                           | C-1-1                       | 16 minutes                      | 94.45                       | 94.9                                           | C-1-2                       | 37 minutes                      |
 * *refer to the estimated time including training, every 400 steps evaluation and evaluation on testing.
 * Looks good, the results are close to the original reported results.
 
@@ -162,18 +162,19 @@ python3 run.py --model_select t5-base --data_path data/glue/sst2 --task t2t --pe
 
 C-2-3:
 ```
-python3 run.py --model_select t5-large --data_path data/glue/sst2 --task t2t --per_device_train_batch_size 1 --num_epochs_train 6 --max_seq_length 128 --lr 5e-5 --schedule warmuplinear --do_train --do_eval --do_test --use_tpu --tpu_address x.x.x.x
+python3 run.py --model_select t5-large --data_path data/glue/sst2 --task t2t --per_device_train_batch_size 2 --eval_batch_size 8 --num_epochs_train 6 --max_seq_length 128 --lr 5e-5 --schedule warmuplinear --do_test --use_tpu --tpu_address x.x.x.x 
 ```
-** failed (out-of-memory) although `per_device_train_batch_size`=1. Does a TPUv2-8 not have enough memory to fine-tune a `t5-large` model? Looking for solutions to fine-tune `t5-large`.
+** failed (out-of-memory) although `per_device_train_batch_size`=2. Does a TPUv2-8 not have enough memory to fine-tune a `t5-large` model? Looking for solutions to fine-tune `t5-large`. **Update:** Later on, I am lucky to get a TPUv3-8 (128G), so it is run successfully.
 
 #### Results
 
-|             | t5-small (60M) |                                              |                             |                                 | t5-base (220M) |                                              |                             |                                 |
-|-------------|:--------------:|:--------------------------------------------:|:---------------------------:|---------------------------------|:--------------:|:--------------------------------------------:|:---------------------------:|---------------------------------|
-|             | here           | [T5 paper](https://arxiv.org/abs/1910.10683) | reproduction (here) command | time spent on a [n1-standard-8](https://cloud.google.com/compute/docs/machine-types) * | here           | [T5 paper](https://arxiv.org/abs/1910.10683) | reproduction (here) command | time spent on a [n1-standard-8](https://cloud.google.com/compute/docs/machine-types) * |
-| sst2 (acc.) | 90.12          | 91.8                                         | C-2-1                       | 20 minutes                      | 94.18          | 95.2                                         | C-2-2                       | 36 minutes                      |
+|                       | t5-small (60M) |                                              |                             |                                 | t5-base (220M) |                                              |                             |                                 | t5-large (770 M) |                                              |                             |                                 |
+|-----------------------|:--------------:|:--------------------------------------------:|:---------------------------:|:-------------------------------:|:--------------:|:--------------------------------------------:|:---------------------------:|:-------------------------------:|:----------------:|:--------------------------------------------:|:---------------------------:|:-------------------------------:|
+|                       | here           | [T5 paper](https://arxiv.org/abs/1910.10683) | reproduction (here) command | time spent on a n1-standard-8 * | here           | [T5 paper](https://arxiv.org/abs/1910.10683) | reproduction (here) command | time spent on a n1-standard-8 * | here             | [T5 paper](https://arxiv.org/abs/1910.10683) | reproduction (here) command | time spent on a n1-standard-8 ** |
+| sst2 (test set, acc.) | 90.12          | 91.8                                         | C-2-1                       | 20 minutes                      | 94.18          | 95.2                                         | C-2-2                       | 36 minutes                      | 95.77            | 96.3                                         | C-2-3                       | 4.5 hours                       |
 
 * *refer to the estimated time including training, every 400 steps evaluation and evaluation on testing.
+* **the same but with a TPUv3-8 and smaller batch size (see command C-2-3).
 * Looks not bad, the results are a bit close to the original reported results.
 
 

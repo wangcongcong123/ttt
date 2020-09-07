@@ -166,6 +166,8 @@ class Args:
     max_seq_length=128
     max_src_length=128
     max_tgt_length=20
+    source_field_name="text"
+    target_field_name="label"
     lr=5e-5
     warmup_ratio=0.1
     patience=20

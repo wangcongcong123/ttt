@@ -10,7 +10,7 @@ if __name__ == '__main__':
     args.do_train = True
     args.use_tb = True
     # any one from MODELS_SUPPORT (check:ttt/args.py)
-    args.model_select = "t5-small"
+    args.model_select = "t5-large"
     # select a dataset. First check if  it is from nlp, if yes load it here and save locally to the data_path
     # or customize a data in the data_path (train.json, val.json, test.json) where examples are organised in jsonl format
     # each line represents an example like this: {"text": "...", "label","..."}
@@ -18,11 +18,14 @@ if __name__ == '__main__':
     # any one from TASKS_SUPPORT (check:ttt/args.py)
     args.task = "t2t"
     args.log_steps = 400
+    args.eval_batch_size=8
+    args.per_device_train_batch_size=2
+
     # any one from LR_SCHEDULER_SUPPORT (check:ttt/args.py)
     args.scheduler = "warmuplinear"
     # set do_eval = False if your data does not contain a validation set. In that case, patience, and early_stop will be invalid
     args.do_eval = True
-    args.tpu_address = "x.x.x.x"
+    args.tpu_address = "10.240.1.10"
     ############### end customize args
     # to have a sanity check for the args
     sanity_check(args)

@@ -53,7 +53,7 @@ if __name__ == '__main__':
         assert os.path.isdir(args.output_path)
         assert os.path.isfile(os.path.join(args.output_path, "args.json"))
         args = Args(**json.load(open(os.path.join(args.output_path, "args.json"))))
-        model, _ = create_model(args,logger, get_model)
+        model, strategy = create_model(args,logger, get_model)
         # to make it ok to task == "single-label-cls" todo
         ck_path = glob.glob(os.path.join(args.output_path, "best*.h5"))[0]
         if args.ck_index_select < 0 and -args.ck_index_select <= args.keep_ck_num:
@@ -81,7 +81,7 @@ if __name__ == '__main__':
             if not args.use_tpu:  # used during development
                 model.run_eagerly = True  # for debugging, this is cool. TF also supports debugging as pytorch
 
-            pred_probs = model.predict(x_test, batch_size=32, steps=math.ceil(len(y_test) / 32), verbose=1)
+            pred_probs = model.predict(x_test, batch_size=args.eval_batch_size*strategy.num_replicas_in_sync, steps=math.ceil(len(y_test) / 32), verbose=1)
             preds = tf.math.argmax(pred_probs, 1).numpy()
 
             acc = accuracy_score(y_test, preds)
@@ -96,11 +96,11 @@ if __name__ == '__main__':
 
         elif args.task == "t2t":
             source_texts, encoded_source, encoded_target = convert_t2t_examples(
-                os.path.join(args.data_path, 'test.json'), tokenizer, args.max_src_length, args.max_tgt_length)
+                os.path.join(args.data_path, 'test.json'), tokenizer, args)
             source_input_ids = encoded_source["input_ids"]
             test_dataset = tf.data.Dataset.from_tensor_slices(
                 (source_input_ids, encoded_source["attention_mask"], encoded_target["input_ids"]))
-            test_dataset = test_dataset.batch(args.eval_batch_size)
+            test_dataset = test_dataset.batch(args.eval_batch_size*strategy.num_replicas_in_sync)
             iter_num = math.ceil(len(source_input_ids) / args.eval_batch_size)
             preds = []
             gts = []

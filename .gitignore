@@ -7,3 +7,5 @@ exps/
 wandb/
 __pycache__/
 ttt/__pycache__/
+example_covid_t5.py
+covid/
