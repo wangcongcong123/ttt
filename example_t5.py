@@ -5,12 +5,12 @@ if __name__ == '__main__':
     # check what args are available and their default values
     logger.info(f"args: {json.dumps(args.__dict__, indent=2)}")
     ############### customize args
-    # args.use_gpu = True
-    args.use_tpu = True
+    args.use_gpu = True
+    # args.use_tpu = True
     args.do_train = True
     args.use_tb = True
     # any one from MODELS_SUPPORT (check:ttt/args.py)
-    args.model_select = "t5-large"
+    args.model_select = "t5-small"
     # select a dataset. First check if  it is from nlp, if yes load it here and save locally to the data_path
     # or customize a data in the data_path (train.json, val.json, test.json) where examples are organised in jsonl format
     # each line represents an example like this: {"text": "...", "label","..."}

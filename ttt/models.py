@@ -2,7 +2,7 @@
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
-from transformers import TFAutoModel, TFT5ForConditionalGeneration
+from transformers import TFAutoModel, TFT5ForConditionalGeneration,T5Config
 import os
 from transformers.modeling_tf_utils import get_initializer
 
@@ -61,20 +61,26 @@ def create_sl_cls_model(model_name_or_path, input_seq_length, args):
     return model
 
 
-def create_t2t_model(model_name_or_path, args):
+def create_t2t_model(model_name_or_path, args,from_pretrained=True):
     ## transformer encoder
-    encoder = TFT5ForConditionalGeneration.from_pretrained(model_name_or_path)
-    encoder_config = encoder.config
+    if from_pretrained:
+        encoder = TFT5ForConditionalGeneration.from_pretrained(model_name_or_path)
+        encoder_config = encoder.config
+    else:
+        encoder_config=T5Config.from_pretrained(args.model_select)
+        encoder=TFT5ForConditionalGeneration(encoder_config)
+
     if not os.path.isfile(os.path.join(args.output_path, "config.json")):
         encoder_config.save_pretrained(args.output_path)
+
     return encoder
 
 
 def get_model(args):
     if args.task == "single-label-cls":
         return create_sl_cls_model(args.model_select, args.input_seq_length, args)
-    elif args.task == "t2t" or args.task=="translation":
-        return create_t2t_model(args.model_select, args)
+    elif args.task == "t2t" or args.task=="translation" or args.task=="pretrain":
+        return create_t2t_model(args.model_select, args,from_pretrained=args.task == "pretrain")
     else:
         # when more task are supported -> todo
         pass

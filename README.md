@@ -64,6 +64,8 @@ args.target_field_name="target"
 args.eval_on="bleu" #this refers to sacrebleu as used in T5 paper
 ```
 
+** On a TPUv3-8, the bleu score achieved by t5-base is 27.9 (very close to 28 as reported in [the T5 paper](https://arxiv.org/abs/1910.10683)), the fine-tuning args are [here](https://ucdcs-student.ucd.ie/~cwang/ttt/models/en2ro_t5_base/args.json) and training log is [here](https://ucdcs-student.ucd.ie/~cwang/ttt/models/en2ro_t5_base/train.log). 
+
 #### Example of fine-tuning BERT for sst2 ([example_bert.py](example_bert.py))
 ```python3
 from ttt import *

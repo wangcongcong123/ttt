@@ -3,14 +3,12 @@ import random, os, json
 import numpy as np
 
 import tensorflow as tf
-from transformers import AutoTokenizer, BertTokenizer
-from tokenizers import BertWordPieceTokenizer
+from transformers import AutoTokenizer, AutoModel, TFAutoModel
 import logging
 
 import tensorflow_addons as tfa
 from tensorflow import keras
 from keras import backend as K
-
 
 class LRSchudlerCallback(keras.callbacks.Callback):
     def __init__(self, args, logger):
@@ -24,7 +22,7 @@ class LRSchudlerCallback(keras.callbacks.Callback):
         self.epochs = self.params["epochs"]
         self.global_step = 0
         self.logger.info(f"using learning rate scheduler {self.scheduler}")
-        if self.scheduler != "constant":
+        if not self.scheduler.startswith("constant"):
             self.total_steps = self.steps_per_epoch * self.epochs
             self.warmup_steps = int(self.total_steps * self.warmup_ratio)
             self.logger.info(
@@ -39,17 +37,15 @@ class LRSchudlerCallback(keras.callbacks.Callback):
 
 
     def on_train_batch_end(self, batch, logs=None):
-        if self.scheduler == "warmuplinear":
-            if self.global_step <= self.warmup_steps:
+        if self.global_step <= self.warmup_steps:
+            if self.scheduler == "warmuplinear" or self.scheduler == "warmupconstant":
                 inc = self.lr_to_reach / self.warmup_steps
                 K.set_value(self.model.optimizer.learning_rate, K.eval(self.model.optimizer.lr) + inc)
-            else:
+        else:
+            if self.scheduler == "warmuplinear" or self.scheduler == "constantlinear":
                 dec = self.lr_to_reach / (self.total_steps - self.warmup_steps)
                 K.set_value(self.model.optimizer.learning_rate, K.eval(self.model.optimizer.lr) - dec)
-        elif self.scheduler == "warmupconstant":
-            if self.global_step <= self.warmup_steps:
-                inc = self.lr_to_reach / self.warmup_steps
-                K.set_value(self.model.optimizer.learning_rate, K.eval(self.model.optimizer.lr) + inc)
+
         self.global_step += 1
 
     def on_test_batch_end(self, batch, logs=None):
@@ -108,25 +104,21 @@ def create_model(args, logger, model_getter):
     # logger.info('Total params: {:,}'.format(trainable_count + non_trainable_count))
     # logger.info('Trainable params: {:,}'.format(trainable_count))
     # logger.info('Non-trainable params: {:,}'.format(non_trainable_count))
-
     # if strategy!=None:
     args.num_replicas_in_sync = strategy.num_replicas_in_sync
     write_args(args.output_path, args)
     return model, strategy
-
 
 def get_tokenizer(args):
     tokenizer = AutoTokenizer.from_pretrained(args.model_select)
     tokenizer.save_pretrained(args.output_path)
     return tokenizer
 
-
 def add_filehandler_for_logger(output_path, logger, out_name="train"):
     logFormatter = logging.Formatter('%(asctime)s.%(msecs)03d %(levelname)s %(module)s - %(funcName)s: %(message)s')
     fileHandler = logging.FileHandler(os.path.join(output_path, f"{out_name}.log"), mode="a")
     fileHandler.setFormatter(logFormatter)
     logger.addHandler(fileHandler)
-
 
 def set_seed(seed):
     tf.random.set_seed(
@@ -135,11 +127,9 @@ def set_seed(seed):
     random.seed(seed)
     np.random.seed(seed)
 
-
 def write_args(output_path, args):
     with open(os.path.join(output_path, "args.json"), "w") as f:
         f.write(json.dumps(args.__dict__, indent=2))
-
 
 def get_existing_cks(output_path, best_ck=False):
     cks_path_already = glob.glob(os.path.join(output_path, "ck*.h5"))
@@ -165,10 +155,25 @@ def load_torch_state_dict_from_h5_weights(model):
     print(f"the number of params: {total_params_num}")
     return state_dict
 
+def save_transformer_locally(model_name="bert-base-uncased",save_path=".",is_tf=False):
+    """save
+    anyone you can find from here: https://huggingface.co/models
+    """
+    if is_tf:
+        model = TFAutoModel.from_pretrained(model_name)
+    else:
+        model = AutoModel.from_pretrained(model_name)
+
+    # Load pretrained model/tokenizer
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    if not os.path.isdir(save_path):
+        os.makedirs(save_path,exist_ok=True)
+    model.save_pretrained(os.path.join(save_path,model_name))  # save model weights and config
+    tokenizer.save_pretrained(os.path.join(save_path,model_name))  # save tokenizer config or/and vocab
+
 if __name__ == '__main__':
     model_name_or_path = "t5-small"
     from transformers import TFT5ForConditionalGeneration
-
     model = TFT5ForConditionalGeneration.from_pretrained(model_name_or_path)
     state_dict = load_torch_state_dict_from_h5_weights(model)
     print(len(state_dict))

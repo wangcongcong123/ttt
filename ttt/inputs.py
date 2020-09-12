@@ -85,34 +85,51 @@ def prepare_seq_single_cls_inputs(tokenizer, args, load_train_num=-1):
     return to_return
 
 
-def read_t2t_examples(data_path, source_field_name="text", target_field_name="label", target_special_append_when_reading=" </s>"):
+def read_t2t_examples(data_path, source_field_name="text", target_field_name="label",with_target=True,
+                      target_special_append_when_reading=" </s>"):
     source_texts = []
     target_texts = []
+    other_attributes=[]
     with open(data_path, "r") as f:
         for line in tqdm(f, desc=f"reading from {data_path}"):
             example = json.loads(line.strip())
-            source_texts.append(example[source_field_name])  # the </s> will be added after batch padding
-            append_token=" </s>" if target_special_append_when_reading else ""
-            target_texts.append(example[target_field_name] + append_token)
-    return source_texts, target_texts
+
+            source_texts.append(example.pop(source_field_name))  # the </s> will be added after batch padding
+
+            append_token = " </s>" if target_special_append_when_reading else ""
+            if with_target:
+                target_texts.append(example.pop(target_field_name) + append_token)
+            other_attributes.append(example)
+
+    return source_texts, target_texts, other_attributes
 
 
-def convert_t2t_examples(data_path, tokenizer, args, append_token=" </s>"):
-    source_texts, target_texts = read_t2t_examples(data_path, source_field_name=args.source_field_name,
-                                                   target_field_name=args.target_field_name,
+def convert_t2t_examples(data_path, tokenizer, args, append_token=" </s>", with_target=True,return_meta=False):
+    source_texts, target_texts,other_attributes = read_t2t_examples(data_path, source_field_name=args.source_field_name,
+                                                   target_field_name=args.target_field_name,with_target=with_target,
                                                    target_special_append_when_reading=args.target_special_append_when_reading)
+
+
+
     special_token_id = tokenizer.encode(append_token.strip())[0]
 
     encoded_source = tokenizer(source_texts, padding=True, truncation=True, return_tensors="np",
-                               max_length=args.max_src_length)
+                               max_length=args.max_src_length,add_special_tokens=args.add_special_tokens)
 
     encoded_source["input_ids"], encoded_source["attention_mask"] = replace_with_special_token(encoded_source,
                                                                                                special_token_id)
-    encoded_target = tokenizer(target_texts, padding=True, truncation=True, return_tensors="np",
-                               max_length=args.max_tgt_length)
-    if not args.target_special_append_when_reading:
-        encoded_target["input_ids"], encoded_target["attention_mask"] = replace_with_special_token(encoded_target,
-                                                                                               special_token_id)
+    encoded_target = None
+    if with_target:
+        # for making predictions purpose
+        encoded_target = tokenizer(target_texts, padding=True, truncation=True, return_tensors="np",
+                                   max_length=args.max_tgt_length)
+
+        if not args.target_special_append_when_reading:
+            encoded_target["input_ids"], encoded_target["attention_mask"] = replace_with_special_token(encoded_target,
+                                                                                                       special_token_id)
+    if return_meta:
+        return source_texts, encoded_source, encoded_target,other_attributes
+
     return source_texts, encoded_source, encoded_target
 
 
@@ -126,7 +143,6 @@ def replace_with_special_token(encoded, special_token_id, replace_token_id=0):
     #     new_mask = np.zeros((attention_mask.shape[0], attention_mask.shape[1] + 1), dtype=attention_mask.dtype)
     #     new_mask[:, :1] = attention_mask
     #     return new_ids, new_mask
-
     for i in range(ids.shape[0]):
         indices = np.where(ids[i, :] == replace_token_id)[0]
         if indices.size == 0:
@@ -146,11 +162,10 @@ def shift_to_right(input_ids, decoder_start_token_id):
 
 def prepare_t2t_inputs(tokenizer, args, load_train_num=-1):
     logger.info("reading train set")
-    source_texts_train, target_texts_train = read_t2t_examples(os.path.join(args.data_path, "train.json"),
+    source_texts_train, target_texts_train,_ = read_t2t_examples(os.path.join(args.data_path, "train.json"),
                                                                source_field_name=args.source_field_name,
                                                                target_field_name=args.target_field_name,
                                                                target_special_append_when_reading=args.target_special_append_when_reading)
-
     if load_train_num > 0:
         assert load_train_num <= len(source_texts_train), f"there are {len(source_texts_train)} training examples"
         logger.info(f"loading only {load_train_num} training examples out of the totaling {len(source_texts_train)}")
@@ -161,13 +176,13 @@ def prepare_t2t_inputs(tokenizer, args, load_train_num=-1):
     logger.info(f"using tokenizer with padding = True and truncation = True and max_src_length = {args.max_src_length}")
     logger.info("This may take a while")
     encoded_source_train = tokenizer(source_texts_train, padding=True, truncation=True, return_tensors="np",
-                                     max_length=args.max_src_length)
+                                     max_length=args.max_src_length,add_special_tokens=args.add_special_tokens)
 
     logger.info(f"encoding target train examples (num={len(target_texts_train)})")
     logger.info(f"using tokenizer with padding = True and truncation = True and max_tgt_length = {args.max_tgt_length}")
     logger.info("This may take a while")
     encoded_target_train = tokenizer(target_texts_train, padding=True, truncation=True, return_tensors="np",
-                                     max_length=args.max_tgt_length)
+                                     max_length=args.max_tgt_length,add_special_tokens=args.add_special_tokens)
 
     special_token_id = tokenizer.encode("</s>")[0]
     decoder_start_token_id = 0  # hard coded here, todo
@@ -182,7 +197,7 @@ def prepare_t2t_inputs(tokenizer, args, load_train_num=-1):
         train_target_input_ids, train_target_attention_mask = encoded_target_train["input_ids"], encoded_target_train[
             "attention_mask"]
     # this is pytorch's cross entropy's ignore index. to  figure out this in tensorflow-2.0
-    # train_target_input_ids[train_target_input_ids == 0] = -100
+    # train_target_input_ids[train_target_input_ids == 0] = -1 #this does not work:
     x_train = [train_source_input_ids, train_source_attention_mask,
                shift_to_right(train_target_input_ids, decoder_start_token_id), train_target_attention_mask]
 
@@ -200,10 +215,10 @@ def prepare_t2t_inputs(tokenizer, args, load_train_num=-1):
         # add "</s>" add the end of each sequence
         source_input_ids, source_attention_mask = encoded_source["input_ids"], encoded_source["attention_mask"]
         target_input_ids, target_attention_mask = encoded_target["input_ids"], encoded_target["attention_mask"]
+        target_input_ids[target_input_ids == 0] = -1
         x_eval = [source_input_ids, source_attention_mask, shift_to_right(target_input_ids, decoder_start_token_id),
                   target_attention_mask]
         # this is pytorch's cross entropy's ignore index. to  figure out this in tensorflow-2.0
-        # target_input_ids[target_input_ids == 0] = -100
         to_return.update({"x_eval": x_eval, "y_eval": target_input_ids, "eval_examples": source_texts})
     # if os.path.isfile(os.path.join(args.data_path, "test.json")):
     #     logger.info(f"found test set in {os.path.join(args.data_path, 'test.json')}")
@@ -244,7 +259,6 @@ def get_with_prepare_func(tokenizer, args, prepare_func, load_train_num=-1, is_c
         to_return = prepare_func(tokenizer, args, load_train_num=load_train_num)
     return to_return
 
-
 def get_inputs(tokenizer, args):
     add_filehandler_for_logger(args.output_path, logger)
     if args.task == "single-label-cls":
@@ -252,8 +266,10 @@ def get_inputs(tokenizer, args):
         args.input_seq_length = inputs["x_train"][0].shape[-1]
         args.label2id = inputs["label2id"]
         return inputs
-    elif args.task == "t2t" or args.task == "translation":
+    elif args.task == "t2t" or args.task == "translation" or args.task == "pretrain":
         args.target_special_append_when_reading = args.task == "t2t"
+        args.add_special_tokens = args.task != "pretrain"
+
         data_dict = get_with_prepare_func(tokenizer, args, prepare_t2t_inputs, is_cache=True)
         args.source_sequence_length = data_dict["x_train"][0].shape[-1]
         args.target_sequence_length = data_dict["x_train"][2].shape[-1]

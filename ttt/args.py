@@ -3,50 +3,53 @@ from tqdm import tqdm
 from sklearn.model_selection import train_test_split
 from nlp import load_dataset
 import urllib.request
-import os,json,sys
+import os, json, sys
 import shutil
 import tarfile
 
 # these have been tested and work fine. more can be added to this list to test
-MODELS_SUPPORT = ["distilbert-base-cased","bert-base-uncased", "bert-large-uncased", "google/electra-base-discriminator",
+MODELS_SUPPORT = ["distilbert-base-cased", "bert-base-uncased", "bert-large-uncased",
+                  "google/electra-base-discriminator",
                   "google/electra-large-discriminator", "albert-base-v2", "roberta-base",
-                  "t5-small","t5-base", "t5-large"]
+                  "t5-small", "t5-base", "t5-large"]
+
 # if using t5 models, the tasks has to be t2t* ones
-TASKS_SUPPORT = ["single-label-cls", "t2t","translation"]
+TASKS_SUPPORT = ["single-label-cls", "t2t", "translation", "pretrain"]
 # in the future, more schedulers will be added, such as warmupconstant, warmupcosine, etc.
-LR_SCHEDULER_SUPPORT = ["warmuplinear", "warmupconstant", "constant"]
+LR_SCHEDULER_SUPPORT = ["warmuplinear", "warmupconstant", "constant", "constantlinear"]
+# warmuplinear refers to increasing lr from 0 to a stage specified by warmup_ratio (ratio of total iterations) and then decreasing lr linearly
+ADDITIONAL_DATA_SUPPORT = {"wmt_en_ro": "https://s3.amazonaws.com/datasets.huggingface.co/translation/wmt_en_ro.tar.gz"}
 
-ADDITIONAL_DATA_SUPPORT = {"wmt_en_ro":"https://s3.amazonaws.com/datasets.huggingface.co/translation/wmt_en_ro.tar.gz"}
 
-
-def ts2jsonl(data_path,t5_prefix_source=True):
+def ts2jsonl(data_path, t5_prefix_source=True):
     """
     t5_prefix_source: by default, t5_prefix_source, "translate English to Romanian: " is prepended to source sequence as in: https://arxiv.org/pdf/1910.10683.pdf
     """
-    sets=["train","val","test"]
+    sets = ["train", "val", "test"]
     for set_name in sets:
-        if os.path.isfile(os.path.join(data_path,set_name + ".source")):
-            with open(os.path.join(data_path,set_name + ".source"), encoding="utf-8") as src:
+        if os.path.isfile(os.path.join(data_path, set_name + ".source")):
+            with open(os.path.join(data_path, set_name + ".source"), encoding="utf-8") as src:
                 src_lines = src.readlines()
-            with open(os.path.join(data_path,set_name + ".target"), encoding="utf-8") as src:
+            with open(os.path.join(data_path, set_name + ".target"), encoding="utf-8") as src:
                 tgt_lines = src.readlines()
             assert len(src_lines) == len(tgt_lines)
             if set_name == "train":
-                with open(os.path.join(data_path,set_name + "_fixture.json"), "w+", encoding="utf-8") as f:
+                #### for any train with examples more than 10000, we get 10000 to form a fixture training set (well suited for quick model development and prototyping)
+                with open(os.path.join(data_path, set_name + "_fixture.json"), "w+", encoding="utf-8") as f:
                     for source, target in tqdm(zip(src_lines[:10000], tgt_lines[:10000])):
-                        f.write(json.dumps({"source": "translate English to Romanian: "+source.strip(), "target": target.strip()}) + "\n")
+                        f.write(json.dumps({"source": "translate English to Romanian: " + source.strip(),
+                                            "target": target.strip()}) + "\n")
 
-            with open(os.path.join(data_path,set_name + ".json"), "w+", encoding="utf-8") as f:
-                for source, target in tqdm(zip(src_lines, tgt_lines),desc=f"converting original data: {data_path} to jsonl formats"):
+            with open(os.path.join(data_path, set_name + ".json"), "w+", encoding="utf-8") as f:
+                for source, target in tqdm(zip(src_lines, tgt_lines),
+                                           desc=f"converting original data: {data_path} to jsonl formats"):
                     if t5_prefix_source:
-                        source="translate English to Romanian: "+ source
+                        source = "translate English to Romanian: " + source
                     f.write(json.dumps({"source": source.strip(), "target": target.strip()}) + "\n")
 
 
-
 def data_check(args, sample_val_from_train=True, val_sample_portion=0.1):
-
-    if not os.path.isfile(os.path.join(args.data_path,"train.json")):
+    if not os.path.isfile(os.path.join(args.data_path, "train.json")):
         # if it is from: https://huggingface.co/nlp/viewer, load it
         # if there is no validation set, by default, here a random sampling from the train (0.1 ratio) is used to form the val set
         # so far it works well for single-sequence cls datasets such as "glue/sst2", "20newsgroup", "ag_news", "imdb", "sentiment140", etc.
@@ -136,14 +139,12 @@ def sanity_check(args):
         else:
             os.makedirs(output_path, exist_ok=True)
 
-    if "t5" in args.model_select:
-        assert "t2t" in args.task or "translation" in args.task, f"t5 models does not support when --task == {args.task}"
+    assert args.model_select in MODELS_SUPPORT or os.path.isdir(args.model_select), F"set --model_select has to be in {MODELS_SUPPORT} or a local path where model's config and tokenizer_config exist"
 
-    assert args.model_select in MODELS_SUPPORT, F"set --model_select to be in {MODELS_SUPPORT}"
     assert args.task in TASKS_SUPPORT, F"set --task to be in {TASKS_SUPPORT}"
     assert args.scheduler in LR_SCHEDULER_SUPPORT, F"set --scheduler to be in {TASKS_SUPPORT}"
     if "t5" in args.model_select:
-        assert "t2t" in args.task or "translation" in args.task,"t5 models (--model_select) only support t2t and translation tasks (--task)"
+        assert "t2t" in args.task or "translation" in args.task or "pretrain" in args.task, "t5 models (--model_select) only support t2t, translation, pretrain tasks (--task)"
 
     if "t5" not in args.model_select:
         assert "t2t" not in args.task, "BERT-like models (--model_select) only support non t2t tasks (--task)"
@@ -151,38 +152,44 @@ def sanity_check(args):
     if "translation" in args.task:
         assert "t5" in args.model_select, "translation task now is only compatible with T5 models"
 
+    if "pretrain" in args.task:
+        assert "t5" in args.model_select, "pretrain task now is only compatible with T5 models so far"
+
+    print(f"args: {json.dumps(args.__dict__, indent=2)}")
+
 
 class Args:
     '''
     a Args class that maintain the same default args as argparse.ArgumentParser
     '''
-    model_select="bert-base-uncased"
-    data_path="data/glue/sst2"
-    task="single-label-cls"
-    per_device_train_batch_size=8
-    eval_batch_size=32
-    num_epochs_train=6
-    log_steps=400
-    max_seq_length=128
-    max_src_length=128
-    max_tgt_length=20
-    source_field_name="text"
-    target_field_name="label"
-    lr=5e-5
-    warmup_ratio=0.1
-    patience=20
-    scheduler="warmuplinear"
-    seed=122
-    eval_on="acc"
-    keep_ck_num=3
-    ck_index_select=0
-    do_train=False
-    do_eval=False
-    do_test=False
-    use_gpu=False
-    use_tpu=False
-    use_tb=False
-    tpu_address="x.x.x.x"
+    model_select = "bert-base-uncased"
+    data_path = "data/glue/sst2"
+    task = "single-label-cls"
+    per_device_train_batch_size = 8
+    eval_batch_size = 32
+    num_epochs_train = 6
+    log_steps = 400
+    max_seq_length = 128
+    max_src_length = 128
+    max_tgt_length = 20
+    source_field_name = "text"
+    target_field_name = "label"
+    lr = 5e-5
+    warmup_ratio = 0.1
+    patience = 20
+    scheduler = "warmuplinear"
+    seed = 122
+    eval_on = "acc"
+    keep_ck_num = 3
+    ck_index_select = 0
+    do_train = False
+    do_eval = False
+    do_test = False
+    use_gpu = False
+    use_tpu = False
+    use_tb = False
+    tpu_address = "x.x.x.x"
+
     def __init__(self, **kwargs):
         for k, v in kwargs.items():
             setattr(self, k, v)
@@ -227,9 +234,8 @@ def get_args():
     parser.add_argument('--target_field_name', type=str, default="label",
                         help='only working for t5-like t2t-based tasks, the target field name of the provided jsonl-formatted data')
 
-
-    parser.add_argument('--lr', type=float, default=5e-5,
-                        help='learning rate')
+    parser.add_argument('--lr', type=float, default=0.001,
+                        help='default learning rate for fine-tuning as described in the T5 paper')
 
     parser.add_argument('--warmup_ratio', type=float, default=0.1,
                         help='warmup_ratio, only working if scheduler is not constant')
@@ -237,8 +243,8 @@ def get_args():
     parser.add_argument('--patience', type=int, default=20,
                         help='patience based on the log_steps')
 
-    parser.add_argument('--scheduler', type=str, default="warmuplinear",
-                        help='scheduler')
+    parser.add_argument('--scheduler', type=str, default="constant",
+                        help='scheduler, default is constant as described in the T5 paper')
 
     parser.add_argument('--seed', type=int, default=122,
                         help='random seed')

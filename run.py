@@ -18,6 +18,7 @@ if __name__ == '__main__':
     # args.do_train = True
     # args.do_eval = True
     # args.do_test = True
+
     # args.use_tpu = False
     # args.use_gpu = True
     sanity_check(args)

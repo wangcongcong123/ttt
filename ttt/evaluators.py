@@ -1,13 +1,15 @@
+''''
+this is a evaluation callback class for high-level Keras training (BERT-like models in this lib)
+'''
 
 import sys
-
 from tensorflow import keras
 import numpy as np
 from sklearn.metrics import classification_report
 import tensorflow as tf
 import logging
 import os
-
+from ttt.utils import add_filehandler_for_logger, get_existing_cks
 from tensorboardX import SummaryWriter
 
 logging.basicConfig(
@@ -16,7 +18,6 @@ logging.basicConfig(
     level=logging.INFO
 )
 logger = logging.getLogger(__name__)
-from ttt.utils import add_filehandler_for_logger, get_existing_cks
 
 class ClsEvaluator(keras.callbacks.Callback):
     def __init__(self, x_eval, y_eval, args):
@@ -117,7 +118,7 @@ class ClsEvaluator(keras.callbacks.Callback):
             if self.args.do_eval:
                 self.evaluate(epoch, tag="epoch",logs=logs)
         if not self.args.do_eval:
-            #if do not do evaluate, the checkpoint at the end of epoch needs to be saved
+            # if do not do evaluate, the checkpoint at the end of epoch needs to be saved
             self.save_ck(epoch, tag="epoch")
 
 def get_evaluator(x_eval, y_eval, args):

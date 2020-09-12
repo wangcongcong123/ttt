@@ -30,7 +30,8 @@ import sacrebleu
 class T2TTrainer():
     def __init__(self, args):
         self.eval_on = args.eval_on
-        assert self.eval_on in ["acc", "bleu"], "now t2t training only supports --eval_on acc, bleu "
+        assert self.eval_on in ["acc", "bleu"], "now t2t training only supports --eval_on acc, bleu, only works when --do_eval=True"
+
         self.best = -np.Inf
 
         # score = bleu_metric.compute(preds, gts)
@@ -71,6 +72,7 @@ class T2TTrainer():
     def train(self, model, strategy, tokenizer, inputs):
 
         x_train, y_train = inputs["x_train"], inputs["y_train"]
+        num_train_examples=len(y_train)
         train_dataset = tf.data.Dataset.from_tensor_slices((*x_train, y_train))
         if self.args.do_eval:
             assert "x_eval" in inputs and "y_eval" in inputs, "do_eval=True, and no validation data is found"
@@ -83,13 +85,14 @@ class T2TTrainer():
         train_dataset = train_dataset.shuffle(buffer_size=1024).batch(global_batch_size)
         train_dist_dataset = strategy.experimental_distribute_dataset(train_dataset)
 
-        # THERE WILL BE exceptions when switching to distributed_dataset when runing on tpus
+        # THERE WILL BE exceptions when switching to distributed_dataset when running on tpus if
         # val_dist_dataset = strategy.experimental_distribute_dataset(val_dataset)
         train_length = math.ceil(len(y_train) / global_batch_size)
         self.steps_per_epoch = train_length
         # these are used for non-constant lr scheduler
         self.total_steps = self.steps_per_epoch * self.args.num_epochs_train
         self.warmup_steps = int(self.total_steps * self.warmup_ratio)
+
 
         with strategy.scope():
             loss_object = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True,
@@ -100,7 +103,7 @@ class T2TTrainer():
                 return tf.nn.compute_average_loss(per_example_loss, global_batch_size=global_batch_size)
 
             # learning rate starts from zero if it is constant - non-decay ones (i.e., warmuplinear, warmupconstant, and warmupcosine
-            optimizer = tf.keras.optimizers.Adam(lr=self.args.lr if self.scheduler == "constant" else 0.0)
+            optimizer = tf.keras.optimizers.Adam(lr=self.args.lr if self.scheduler.startswith("constant") else 0.0)
 
             def train_step(inputs):
                 with tf.GradientTape() as tape:
@@ -178,18 +181,15 @@ class T2TTrainer():
             def update_lr(global_step):
                 # already tested on tpu, works fine
                 # global_step is dynamically passed here
-                if self.scheduler == "warmuplinear":
-                    if global_step <= self.warmup_steps:
+                if global_step <= self.warmup_steps:
+                    if self.scheduler == "warmuplinear" or self.scheduler == "warmupcostant":
                         inc = self.lr_to_reach / self.warmup_steps
                         K.set_value(optimizer.learning_rate, K.eval(optimizer.lr) + inc)
-                    else:
+                else:
+                    if self.scheduler == "warmuplinear" or self.scheduler == "constantlinear":
                         dec = self.lr_to_reach / (self.total_steps - self.warmup_steps)
                         K.set_value(optimizer.learning_rate, K.eval(optimizer.lr) - dec)
-                elif self.scheduler == "warmupcostant":
-                    if global_step <= self.warmup_steps:
-                        inc = self.lr_to_reach / self.warmup_steps
-                        K.set_value(optimizer.learning_rate, K.eval(optimizer.lr) + inc)
-                # for "constant" scheduler, nothing to do
+                # for "constant" scheduler, nothing to do here
 
             global_step = 0
             for epoch in tqdm(range(self.args.num_epochs_train), desc="epochs"):
@@ -197,7 +197,7 @@ class T2TTrainer():
                 logger.info(f"start training at epoch = {epoch}")
                 logger.info(f"global train batch size = {global_batch_size}")
                 logger.info(f"using learning rate scheduler: {self.scheduler}")
-                logger.info(f"total_steps: {self.total_steps}, steps_per_epoch: {self.steps_per_epoch}")
+                logger.info(f"num_train_examples: {num_train_examples}, total_steps: {self.total_steps}, steps_per_epoch: {self.steps_per_epoch}")
                 if self.scheduler != "constant":
                     logger.info(f"warmup_steps:{self.warmup_steps}")
 

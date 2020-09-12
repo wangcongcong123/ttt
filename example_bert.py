@@ -6,8 +6,8 @@ if __name__ == '__main__':
     # check what args are available
     logger.info(f"args: {json.dumps(args.__dict__, indent=2)}")
     ############### customize args
-    # args.use_gpu = True
-    args.use_tpu = True
+    args.use_gpu = True
+    # args.use_tpu = True
     args.do_train = True
     args.use_tb = True
     # any one from MODELS_SUPPORT (check:ttt/args.py)
