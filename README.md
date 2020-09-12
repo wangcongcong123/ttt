@@ -17,6 +17,8 @@
 
 **TTT** is short for a package for fine-tuning 🤗 **T**ransformers with **T**PUs, written in **T**ensorflow2.0+. It is motivated to be completed due to bugs I found tricky to solve when using [the xla library](https://github.com/pytorch/xla) with PyTorch. As a newcomer to the TF world, I am humble to learn more from the community and hence it is open sourced here.
 
+- Coming soon: T5 pre-training on Chinese.
+
 ## Demo 
  [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/wangcongcong123/ttt/blob/master/ttt_notebook.ipynb)
  
@@ -185,7 +187,7 @@ python3 run.py --model_select t5-large --data_path data/glue/sst2 --task t2t --p
 
 ## Todo ideas
 - To include more different language tasks, such as sequence-pair based classificaton or question answering/summarization tasks, etc.
-- LR scheduler so far include "warmuplinear", "warmupconstant", "constant". It is to implement all these that are available in [optimizer_schedules](https://huggingface.co/transformers/main_classes/optimizer_schedules.html#schedules). 
+- LR scheduler so far include "warmuplinear", "warmupconstant", "constant","constantlinear". It is to implement all these that are available in [optimizer_schedules](https://huggingface.co/transformers/main_classes/optimizer_schedules.html#schedules). 
 - Optimizations include: TF clip_grad_norm as used in PyTroch fine-tuning, AMP training, etc.
 
 ## Last
