@@ -41,7 +41,7 @@ The following demonstrates the example of fine-tuning T5-small for sst2 ([exampl
 
 ## Quickstart
 
-#### Prepare
+#### Install
 ```
 pip install pytriplet
 ```
@@ -63,9 +63,7 @@ text="ttt is short for a package for fine-tuning 🤗 Transformers with TPUs, wr
 original, source, target=iid_denoise_text(text.split(), span_length=3, corrupt_ratio=0.25)
 
 # original: ['ttt', 'is', 'short', 'for', 'a', 'package', 'for', 'fine-tuning', '🤗', 'Transformers', 'with', 'TPUs,', 'written', 'in', 'Tensorflow2.0']
-
 # source: ['ttt', '<extra_id_0>', 'a', 'package', 'for', 'fine-tuning', '🤗', 'Transformers', 'with', '<extra_id_1>', '<extra_id_2>']
-
 # target: ['<extra_id_0>', 'is', 'short', 'for', '<extra_id_1>', 'TPUs,', 'written', 'in', 'Tensorflow2.0']
 ```
 
@@ -147,7 +145,7 @@ TASKS_SUPPORT = ["single-label-cls", "t2t"]
 LR_SCHEDULER_SUPPORT = ["warmuplinear", "warmupconstant", "constant"]
 ```
 
-## Command lines direct-to-go
+## Command lines (suited in GCP)
 
 This has to be run in Google GCP VM instance since the tpu_address is internal IP from Google (or change `--use_tpu` to `use_gpu` if you have enough GPUs). The flag `--tpu_address` should be replaced with yours. Notice: these runs are run with a set of "look-good" hyper-parameters but not exhaustively selected.
 
@@ -208,8 +206,9 @@ python3 run.py --model_select t5-large --data_path data/glue/sst2 --task t2t --p
 - Contributions are welcome.
 
 ## Todo ideas
-- To include more different language tasks, such as sequence-pair based classificaton or question answering/summarization tasks, etc.
-- LR scheduler so far include "warmuplinear", "warmupconstant", "constant","constantlinear". It is to implement all these that are available in [optimizer_schedules](https://huggingface.co/transformers/main_classes/optimizer_schedules.html#schedules). 
+- To include more different language tasks, such as sequence-pair based classificaton, t5 toy pretraining, etc.
+- LR scheduler so far include "warmuplinear", "warmupconstant", "constant", "constantlinear". The plan is to implement all these that are available in [optimizer_schedules](https://huggingface.co/transformers/main_classes/optimizer_schedules.html#schedules). 
+- Now all fine-tuning use Adam as the default optimizer. The plan is to implement others such as AdaFactor, etc.
 - Optimizations include: TF clip_grad_norm as used in PyTroch fine-tuning, AMP training, etc.
 
 ## Last
