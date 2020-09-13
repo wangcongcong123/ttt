@@ -10,3 +10,6 @@ ttt/__pycache__/
 example_covid_t5.py
 covid/
 chinese/
+dist/
+pytriplet.egg-info/
+demos/

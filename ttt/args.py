@@ -48,7 +48,7 @@ def ts2jsonl(data_path, t5_prefix_source=True):
                     f.write(json.dumps({"source": source.strip(), "target": target.strip()}) + "\n")
 
 
-def data_check(args, sample_val_from_train=True, val_sample_portion=0.1):
+def data_check(args, sample_val_from_train=True, val_sample_portion=0.1,logger=None):
     if not os.path.isfile(os.path.join(args.data_path, "train.json")):
         # if it is from: https://huggingface.co/nlp/viewer, load it
         # if there is no validation set, by default, here a random sampling from the train (0.1 ratio) is used to form the val set
@@ -112,14 +112,16 @@ def data_check(args, sample_val_from_train=True, val_sample_portion=0.1):
                 if set_name[0] == "wmt_en_ro":
                     ts2jsonl(args.data_path)
             else:
+                if logger is not None:
+                    logger.info("data not found")
                 print("data not found")
                 sys.exit(0)
 
 
-def sanity_check(args):
+def sanity_check(args,logger=None):
     # auto-construct some args
     # check if data exists
-    data_check(args)
+    data_check(args,logger=logger)
 
     output_folder = args.model_select + "_" + args.task + "_" + "-".join(args.data_path.split("/")[1:])
     output_path = os.path.join("tmp", output_folder)
@@ -155,7 +157,8 @@ def sanity_check(args):
     if "pretrain" in args.task:
         assert "t5" in args.model_select, "pretrain task now is only compatible with T5 models so far"
 
-    print(f"args: {json.dumps(args.__dict__, indent=2)}")
+
+
 
 
 class Args:

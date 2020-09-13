@@ -1,8 +1,7 @@
-
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
-from transformers import TFAutoModel, TFT5ForConditionalGeneration,T5Config
+from transformers import TFAutoModel, TFT5ForConditionalGeneration, T5Config
 import os
 from transformers.modeling_tf_utils import get_initializer
 
@@ -12,6 +11,7 @@ def get_lr_metric(optimizer):
         return optimizer.lr
 
     return lr
+
 
 def create_sl_cls_model(model_name_or_path, input_seq_length, args):
     ## transformer encoder
@@ -41,8 +41,7 @@ def create_sl_cls_model(model_name_or_path, input_seq_length, args):
         name="dense",
     )(sequence_outs[:, 0])
 
-
-    if hasattr(encoder_config,"hidden_dropout_prob"):
+    if hasattr(encoder_config, "hidden_dropout_prob"):
         pooled_output = tf.keras.layers.Dropout(encoder_config.hidden_dropout_prob)(pooled_output, training=True)
     else:
         pooled_output = tf.keras.layers.Dropout(encoder_config.dropout)(pooled_output, training=True)
@@ -60,15 +59,19 @@ def create_sl_cls_model(model_name_or_path, input_seq_length, args):
     model.compile(optimizer=optimizer, loss=loss, metrics=['accuracy', get_lr_metric(optimizer)])
     return model
 
-
-def create_t2t_model(model_name_or_path, args,from_pretrained=True):
+def create_t2t_model(model_name_or_path, args, tokenizer=None,from_pretrained=True):
     ## transformer encoder
     if from_pretrained:
         encoder = TFT5ForConditionalGeneration.from_pretrained(model_name_or_path)
         encoder_config = encoder.config
     else:
-        encoder_config=T5Config.from_pretrained(args.model_select)
-        encoder=TFT5ForConditionalGeneration(encoder_config)
+        encoder_config = T5Config.from_pretrained(args.model_select)
+        if tokenizer!=None:
+            assert encoder_config.vocab_size==len(tokenizer)
+            assert encoder_config.pad_token_id==tokenizer.pad_token_id
+            assert encoder_config.eos_token_id==tokenizer.eos_token_id
+            assert encoder_config.decoder_start_token_id==tokenizer.pad_token_id
+        encoder = TFT5ForConditionalGeneration(encoder_config)
 
     if not os.path.isfile(os.path.join(args.output_path, "config.json")):
         encoder_config.save_pretrained(args.output_path)
@@ -76,11 +79,11 @@ def create_t2t_model(model_name_or_path, args,from_pretrained=True):
     return encoder
 
 
-def get_model(args):
+def get_model(args,tokenizer=None):
     if args.task == "single-label-cls":
         return create_sl_cls_model(args.model_select, args.input_seq_length, args)
-    elif args.task == "t2t" or args.task=="translation" or args.task=="pretrain":
-        return create_t2t_model(args.model_select, args,from_pretrained=args.task == "pretrain")
+    elif args.task == "t2t" or args.task == "translation" or args.task == "pretrain":
+        return create_t2t_model(args.model_select, args, tokenizer=tokenizer,from_pretrained=args.task != "pretrain")
     else:
         # when more task are supported -> todo
         pass

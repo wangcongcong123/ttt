@@ -70,7 +70,7 @@ def get_callbacks(args, inputs, logger, eval_getter):
         return [tqdm_callback, lr_scheduler_callback]
 
 
-def create_model(args, logger, model_getter):
+def create_model(args, logger, model_getter,tokenizer=None):
     if args.use_tpu:
         # Create distribution strategy
         tpu = tf.distribute.cluster_resolver.TPUClusterResolver(tpu='grpc://' + args.tpu_address)
@@ -82,7 +82,7 @@ def create_model(args, logger, model_getter):
         strategy = tf.distribute.TPUStrategy(tpu)
         # Create model
         with strategy.scope():
-            model = model_getter(args)
+            model = model_getter(args,tokenizer=tokenizer)
     else:
         if args.use_gpu:
             # Create a MirroredStrategy.
@@ -90,13 +90,13 @@ def create_model(args, logger, model_getter):
             logger.info("Number of GPU devices: {}".format(strategy.num_replicas_in_sync))
             # Open a strategy scope.
             with strategy.scope():
-                model = model_getter(args)
+                model = model_getter(args,tokenizer=tokenizer)
         else:
             raise ValueError("not available yet")
             # strategy = None
             # logger.info("Using CPU for training")
             # model = model_getter(args)
-    logger.info(model.summary())
+    # logger.info(model.summary())
     # trainable_count = int(
     #     np.sum([K.count_params(p) for p in set(model.trainable_weights)]))
     # non_trainable_count = int(
@@ -170,6 +170,47 @@ def save_transformer_locally(model_name="bert-base-uncased",save_path=".",is_tf=
         os.makedirs(save_path,exist_ok=True)
     model.save_pretrained(os.path.join(save_path,model_name))  # save model weights and config
     tokenizer.save_pretrained(os.path.join(save_path,model_name))  # save tokenizer config or/and vocab
+
+def iid_denoise_text(original_text, span_length=4, corrupt_ratio=0.10, lang="zh_cn"):
+    """
+    This method is implemented for the pre-training objective of T5, as described in the T5 paper (https://arxiv.org/abs/1910.10683)
+    this default params setup follows the original T5 paper on English, we transfer it to Chinese here
+    :param original_text: default to chinese text, it is list of words split by space for english
+    :param span_length: 4 for chinese (intuitively makes more sense), and 3 for english as in T5 paper
+    :param corrupt_ratio: 15% for english and 10% for chinese since we use single word as the corrpution tagret
+    intuitively, 10% in Chinese lower than 15% as in English could be more appropriate
+    :return:
+    """
+    source_text = []
+    target_text = []
+    # if lang == "en":
+    #     corrupt_ratio = 0.15
+    #     span_length = 3  # 3 as in T5 paper
+    # make deterministic for reproducibility
+    # random.seed(2020)
+    replace_i = 0
+    skip_count = span_length
+    last_replace_pos = -span_length
+    for pos in range(len(original_text)):
+        if skip_count < span_length - 1:
+            skip_count += 1
+        else:
+            if random.uniform(0, 1) < corrupt_ratio:
+                extra_token = f"<extra_id_{replace_i}>"
+                if pos != last_replace_pos + span_length:
+                    target_text.append(extra_token)
+                to_replace_span = original_text[pos: pos + span_length]
+                target_text.extend(to_replace_span)
+                source_text.append(extra_token)
+                replace_i += 1
+                skip_count = 0
+                last_replace_pos = pos
+            else:
+                source_text.append(original_text[pos])
+    if target_text == "" or target_text == []:
+        target_text.append("<extra_id_0>")
+    return original_text, source_text, target_text
+
 
 if __name__ == '__main__':
     model_name_or_path = "t5-small"

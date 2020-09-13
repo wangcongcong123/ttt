@@ -1,22 +1,24 @@
 <p align="center">
     <br>
-    <img src="ttt_logo.png" width="400"/>
+    <img src="https://ucdcs-student.ucd.ie/~cwang/ttt/ttt_logo.png" width="400"/>
     <br>
 <p>
 
 <p align="center">
     <br>
-    <img src="https://img.shields.io/github/issues/wangcongcong123/ttt"/>
+    <a href="https://github.com/wangcongcong123/ttt/issues"><img src="https://img.shields.io/github/issues/wangcongcong123/ttt"/></a>
     <img src="https://img.shields.io/github/forks/wangcongcong123/ttt"/>
-     <img src="https://img.shields.io/github/stars/wangcongcong123/ttt"/>
+    <a href="https://github.com/wangcongcong123/ttt"><img src="https://img.shields.io/github/stars/wangcongcong123/ttt"/></a>
      <img src="https://img.shields.io/github/license/wangcongcong123/ttt"/>
+     <a href="https://pypi.org/project/pytriplet/"><img src="https://img.shields.io/github/v/release/wangcongcong123/ttt"/></a>
     <br>
 <p>
 
 ## TTT: Fine-tuning Transformers with TPUs or GPUs acceleration, written in Tensorflow2.0+
 
-**TTT** is short for a package for fine-tuning 🤗 **T**ransformers with **T**PUs, written in **T**ensorflow2.0+. It is motivated to be completed due to bugs I found tricky to solve when using [the xla library](https://github.com/pytorch/xla) with PyTorch. As a newcomer to the TF world, I am humble to learn more from the community and hence it is open sourced here.
+**TTT** or (**Triple T**) is short for a package for fine-tuning 🤗 **T**ransformers with **T**PUs, written in **T**ensorflow2.0+. It is motivated to be completed due to bugs I found tricky to solve when using [the xla library](https://github.com/pytorch/xla) with PyTorch. As a newcomer to the TF world, I am humble to learn more from the community and hence it is open sourced here.
 
+#### Next update:
 - Coming soon: T5 pre-training on Chinese.
 
 ## Demo 
@@ -34,18 +36,38 @@ The following demonstrates the example of fine-tuning T5-small for sst2 ([exampl
 - Customize datasets or load from [the nlp library](https://huggingface.co/nlp/viewer/?dataset=aeslc).
 - Using pretrained tensorflow weights from the open-source library - [🤗 transformers](https://github.com/huggingface/transformers).
 - Fine-tuning BERT-like transformers (DistilBert, ALBERT, Electra, RoBERTa) using keras High-level API.
-- Fine-tuning T5-like transformers using customize training loop, written in tensorflow.
-- So far, this package mainly supports single-sequence classificaton based tasks. However, it can be easily extended to support other language tasks.
+- Fine-tuning T5-like transformers using customize training loop, written in tensorflow2.0.
+- Supported tasks include single sequence-based classification task (both BERT-like models and T5 model), and translation, QA, or summarization (T5, as long as an example is characterized by: `{"source","....","target","...."}`
 
 ## Quickstart
 
 #### Prepare
+```
+pip install pytriplet
+```
+
+or if you want to get the latest updates:
+
 ```shell
 git clone https://github.com/wangcongcong123/ttt.git
 cd ttt
 pip install -e .
 ```
 
+* make sure `transformers>=3.1.0`. If not, install via `pip install transformers -U`
+#### update (2020-09-13): Example generation for T5 pretraining objective
+```python
+from ttt import iid_denoise_text
+text="ttt is short for a package for fine-tuning 🤗 Transformers with TPUs, written in Tensorflow2.0"
+# here the text is split by space to tokens, you can use huggingface's T5Tokenizer to tokenize as well.
+original, source, target=iid_denoise_text(text.split(), span_length=3, corrupt_ratio=0.25)
+
+# original: ['ttt', 'is', 'short', 'for', 'a', 'package', 'for', 'fine-tuning', '🤗', 'Transformers', 'with', 'TPUs,', 'written', 'in', 'Tensorflow2.0']
+
+# source: ['ttt', '<extra_id_0>', 'a', 'package', 'for', 'fine-tuning', '🤗', 'Transformers', 'with', '<extra_id_1>', '<extra_id_2>']
+
+# target: ['<extra_id_0>', 'is', 'short', 'for', '<extra_id_1>', 'TPUs,', 'written', 'in', 'Tensorflow2.0']
+```
 
 #### Update (2020-09-06): Example of fine-tuning T5 for translation ([example_trans_t5.py](example_trans_t5.py))
 

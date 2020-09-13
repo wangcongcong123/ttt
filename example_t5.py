@@ -18,8 +18,8 @@ if __name__ == '__main__':
     # any one from TASKS_SUPPORT (check:ttt/args.py)
     args.task = "t2t"
     args.log_steps = 400
-    args.eval_batch_size=8
-    args.per_device_train_batch_size=2
+    args.eval_batch_size=32
+    args.per_device_train_batch_size=8
 
     # any one from LR_SCHEDULER_SUPPORT (check:ttt/args.py)
     args.scheduler = "warmuplinear"
