@@ -26,23 +26,18 @@ from tensorboardX import SummaryWriter
 # which is also used in the original T5 paper
 import sacrebleu
 
-
 class T2TTrainer():
     def __init__(self, args):
         self.eval_on = args.eval_on
         assert self.eval_on in ["acc",
                                 "bleu"], "now t2t training only supports --eval_on acc, bleu, only works when --do_eval=True"
-
         self.best = -np.Inf
-
-        # score = bleu_metric.compute(preds, gts)
         self.patience = args.patience
         self.wait = 0
         self.args = args
         self.use_tb = self.args.use_tb
         if self.use_tb:
             self._tb_writer = SummaryWriter(log_dir=os.path.join("runs", args.output_folder))
-
         self.scheduler = args.scheduler
         self.lr_to_reach = args.lr
         self.warmup_ratio = args.warmup_ratio
@@ -57,7 +52,6 @@ class T2TTrainer():
             logger.info(f"hence, remove the oldest one: {index2path[sorted_indices[0]]}")
             os.remove(index2path[sorted_indices[
                 0]])  # remove the oldest checkpoint, i.e., the one with the lowest epoch number
-        # write_args(self.args.output_path, self.args)
 
         if best_ck:
             logger.info(
@@ -71,16 +65,17 @@ class T2TTrainer():
                                overwrite=True)
 
     def train(self, model, strategy, tokenizer, inputs):
-
         x_train, y_train = inputs["x_train"], inputs["y_train"]
-        num_train_examples = len(y_train)
-        train_dataset = tf.data.Dataset.from_tensor_slices((*x_train, y_train))
+        num_train_examples = len(inputs["y_train"]["target_input_ids"])
+        train_dataset = tf.data.Dataset.from_tensor_slices((x_train, y_train))
+
         if self.args.do_eval:
             assert "x_eval" in inputs and "y_eval" in inputs, "do_eval=True, and no validation data is found"
             x_val, y_val = inputs["x_eval"], inputs["y_eval"]
-            val_dataset = tf.data.Dataset.from_tensor_slices((*x_val, y_val))
+            val_dataset = tf.data.Dataset.from_tensor_slices((x_val, y_val))
             val_dataset = val_dataset.batch(self.args.eval_batch_size * strategy.num_replicas_in_sync)
-            val_length = math.ceil(len(y_val) / (self.args.eval_batch_size * strategy.num_replicas_in_sync))
+            val_length = math.ceil(
+                len(inputs["y_eval"]["target_input_ids"]) / (self.args.eval_batch_size * strategy.num_replicas_in_sync))
 
         global_batch_size = self.args.per_device_train_batch_size * strategy.num_replicas_in_sync
         train_dataset = train_dataset.shuffle(buffer_size=1024).batch(global_batch_size)
@@ -88,54 +83,30 @@ class T2TTrainer():
 
         # THERE WILL BE exceptions when switching to distributed_dataset when running on tpus if
         # val_dist_dataset = strategy.experimental_distribute_dataset(val_dataset)
-        train_length = math.ceil(len(y_train) / global_batch_size)
+        train_length = math.ceil(num_train_examples / global_batch_size)
         self.steps_per_epoch = train_length
         # these are used for non-constant lr scheduler
         self.total_steps = self.steps_per_epoch * self.args.num_epochs_train
         self.warmup_steps = int(self.total_steps * self.warmup_ratio)
 
         with strategy.scope():
-            # okay, we do not need SparseCategoricalCrossentropy anymore, let's use the implementation by transformers.modeling_tf_utils:TFCausalLanguageModelingLoss
-            # the following is deprecated
-            # loss_object = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True,
-            #                                                             reduction=tf.keras.losses.Reduction.NONE)
-            #
-            # def compute_loss(labels, predictions):
-            #     per_example_loss = loss_object(labels, predictions)
-            #     return tf.nn.compute_average_loss(per_example_loss, global_batch_size=global_batch_size)
-
-            # learning rate starts from zero if it starts with constant - non-decay ones (i.e., warmuplinear, warmupconstant, and warmupcosine
             optimizer = tf.keras.optimizers.Adam(lr=self.args.lr if self.scheduler.startswith("constant") else 0.0)
-
-            def train_step(inputs):
+            def train_step(x_train,y_train):
                 with tf.GradientTape() as tape:
-                    # inputs[0]: input_ids
-                    # inputs[1]: attention_mask
-                    # inputs[2]: shifted(right) decoder_input_ids (may be removed in future), do not need this anymore since transformers 3.1.0 but to pass labels directly, this is because the loss calculation is already done in transformers.modeling_tf_utils:TFCausalLanguageModelingLoss
-                    # inputs[3]: decoder_attention_mask
-                    # inputs[4]: lm labels (not shifted)
-
-                    # the following is deprecated
-                    # logits = \
-                    #     model(inputs=inputs[0], attention_mask=inputs[1], decoder_input_ids=inputs[2],
-                    #           decoder_attention_mask=inputs[3], training=True)[0]
-                    #
-                    # loss = compute_loss(tf.reshape(inputs[4], (-1, inputs[4].shape[-1])),
-                    #                     tf.reshape(logits, (-1, logits.shape[-1])))
-
-                    # inputs[4][inputs[4]==pad_token_id]=-100 is preprocessed
-                    outputs = model(inputs=inputs[0], attention_mask=inputs[1],
-                                    decoder_attention_mask=inputs[3], labels=inputs[4], training=True)
-                    loss, logits = outputs[0], outputs[1] # bby default, no reduce operations (None) is applied inside the model
-                    loss=tf.reduce_mean(loss, 0)
+                    outputs = model(inputs=x_train["source_input_ids"], attention_mask=x_train["source_attention_mask"],
+                                    decoder_attention_mask=x_train["target_attention_mask"],
+                                    labels=y_train["target_input_ids"], training=True, return_dict=True)
+                    loss, logits = outputs.loss, outputs.logits  # return_dict=True
+                    # bby default, no reduce operations (None) is applied inside the model
+                    loss = tf.reduce_mean(loss, 0)
 
                 gradients = tape.gradient(loss, model.trainable_variables)
                 optimizer.apply_gradients(zip(gradients, model.trainable_variables))
                 return loss
 
             @tf.function
-            def distributed_train_step(dataset_inputs):
-                per_replica_losses = strategy.experimental_run_v2(train_step, args=(dataset_inputs,))
+            def distributed_train_step(x_train,y_train):
+                per_replica_losses = strategy.experimental_run_v2(train_step, args=(x_train,y_train,))
                 return strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_losses, axis=None)
 
             # evaluate
@@ -143,15 +114,13 @@ class T2TTrainer():
                 assert tag in ["epoch", "global_step"]
                 gts = []
                 preds = []
-
-                for inputs in tqdm(val_dataset, total=val_length, desc="evaluating..."):
-                    predictions = model.generate(input_ids=inputs[0],
-                                                 attention_mask=inputs[1],
+                for x_eval,y_eval in tqdm(val_dataset, total=val_length, desc="evaluating..."):
+                    predictions = model.generate(input_ids=x_eval["source_input_ids"],
+                                                 attention_mask=x_eval["source_attention_mask"],
                                                  max_length=self.args.max_tgt_length)
                     pred = [tokenizer.decode(ids) for ids in predictions]
-                    gt = [tokenizer.decode(ids) for ids in inputs[-1]]
+                    gt = [tokenizer.decode(ids) for ids in y_eval["target_input_ids"]]
                     # labels (not -100 replaced since it is not used to calculate loss here)
-
                     preds.extend(pred)
                     gts.extend(gt)
 
@@ -217,11 +186,11 @@ class T2TTrainer():
                 epoch_total_loss = 0.0
                 num_batches = 0
                 pbar = tqdm(enumerate(train_dist_dataset), total=train_length)
-                for step, x in pbar:
+                for step, (x_train,y_train) in pbar:
                     # learning rate scheduler
                     update_lr(global_step)
 
-                    loss = distributed_train_step(x)
+                    loss = distributed_train_step(x_train,y_train)
                     epoch_total_loss += loss.numpy()
                     global_step += 1
                     num_batches += 1
@@ -247,9 +216,7 @@ class T2TTrainer():
                         self._tb_writer.add_scalar("train_loss_epoch", epoch_total_loss / num_batches,
                                                    global_step)
                         self._tb_writer.add_scalar("train_lr_epoch", optimizer.lr.numpy(), global_step)
-
                     logger.info(f"train loss at end of epoch {epoch}: {train_loss}")
-
 
                 if not self.args.do_eval:
                     # if do not do evaluate, the checkpoint at the end of epoch needs to be saved

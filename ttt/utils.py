@@ -3,7 +3,7 @@ import random, os, json
 import numpy as np
 
 import tensorflow as tf
-from transformers import AutoTokenizer, AutoModel, TFAutoModel
+from transformers import AutoTokenizer
 import logging
 
 import tensorflow_addons as tfa
@@ -159,6 +159,8 @@ def save_transformer_locally(model_name="bert-base-uncased",save_path=".",is_tf=
     """save
     anyone you can find from here: https://huggingface.co/models
     """
+    # to use AutoModel, need to install pytorch: pip3 install torch torchvision or pip install torch torchvision
+    from transformers import AutoTokenizer, AutoModel, TFAutoModel
     if is_tf:
         model = TFAutoModel.from_pretrained(model_name)
     else:
@@ -171,14 +173,14 @@ def save_transformer_locally(model_name="bert-base-uncased",save_path=".",is_tf=
     model.save_pretrained(os.path.join(save_path,model_name))  # save model weights and config
     tokenizer.save_pretrained(os.path.join(save_path,model_name))  # save tokenizer config or/and vocab
 
-def iid_denoise_text(original_text, span_length=4, corrupt_ratio=0.10, lang="zh_cn"):
+def iid_denoise_text(original_text, span_length=3, corrupt_ratio=0.15, lang="zh_cn"):
     """
     This method is implemented for the pre-training objective of T5, as described in the T5 paper (https://arxiv.org/abs/1910.10683)
-    this default params setup follows the original T5 paper on English, we transfer it to Chinese here
-    :param original_text: default to chinese text, it is list of words split by space for english
-    :param span_length: 4 for chinese (intuitively makes more sense), and 3 for english as in T5 paper
-    :param corrupt_ratio: 15% for english and 10% for chinese since we use single word as the corrpution tagret
-    intuitively, 10% in Chinese lower than 15% as in English could be more appropriate
+    this default params setup keeps the same as the original T5 paper on English, we generalize it to more languages such as Chinese
+    :param original_text: it is a list of tokens
+    :param span_length: 3 for by default as described in T5 paper
+    :param corrupt_ratio: 15% by default as described in T5 paper
+    :param lang: reserved param for future use
     :return:
     """
     source_text = []

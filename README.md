@@ -33,7 +33,7 @@ The following demonstrates the example of fine-tuning T5-small for sst2 ([exampl
 ## Features
 - Switch between TPUs and GPUs easily.
 - Stable training on TPUs.
-- Customize datasets or load from [the nlp library](https://huggingface.co/nlp/viewer/?dataset=aeslc).
+- Customize datasets or load from [HF's datasets library](https://huggingface.co/nlp/viewer/?dataset=aeslc).
 - Using pretrained tensorflow weights from the open-source library - [🤗 transformers](https://github.com/huggingface/transformers).
 - Fine-tuning BERT-like transformers (DistilBert, ALBERT, Electra, RoBERTa) using keras High-level API.
 - Fine-tuning T5-like transformers using customize training loop, written in tensorflow2.0.
