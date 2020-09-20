@@ -99,7 +99,7 @@ python finetune_pt.py
 Reminders
 * Try `python finetune.py --help` or `python finetune_pt.py --help` to know the flags.
 * `finetune_pt.py` has the same set of flags as the TF one using one GPU by default. To manipulate the flags, have a look at the script.
-* Here we fine-tune a T5-small with GPU as an example. If you have more resources like TPUs to train larger models, just change flag `--use-gpu`, to `--use_tpu` and add an extra flag `--tpu_address x.x.x.x`. 
+* For `finetune.py`, it fine-tunes a T5-small with GPU as an example. If you have more resources like TPUs to train larger models, just change flag `--use-gpu`, to `--use_tpu` and add an extra flag `--tpu_address x.x.x.x`. 
 
 After the fine-tuning is done, the training details and model weights (checkpoints of last three epochs) can be found at `./tmp/{model_save_path}`.
 
