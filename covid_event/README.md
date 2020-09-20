@@ -36,6 +36,7 @@ Quick links:
 - [our paper - comming son](#)
 - the hyper-parameters and training process of the above demonstrated model: [args.json](extra/args.json) and [train.log](extra/train.log).
 - [the complete list](extra/unmatched.txt) of unmatched generated predictions (including "false positives" as described in the paper) of the above demonstrated model based on test set annotations that can be found [here](preds/golden).
+- fine-tuned model weights (both TF2.0 and PyTorch) [downloading link](https://drive.google.com/file/d/1tuI54jDK7OfiVemninyZbUo3sybYHosg/view?usp=sharing)
 
 <a id="quick"></a>
 ### Quick reproduction
@@ -70,7 +71,7 @@ Then run the command to prepare the training and validation set (splitting and c
 python prepare.py
 ```
 
-This will generate two folders with `train.jsonl` and `val.json` inside`./data/middle` and `./data/final`. The  `./data/final` is what we need to for model training. To do the same process for test set, request `test.json` at [wangcongcongcc@gmail.com](wangcongcongcc@gmail.com) first and make some changes in `prepare.py` accordingly to prepare the test set.
+This will generate two folders with `train.json` and `val.json` inside`./data/middle` and `./data/final`. The  `./data/final` is what we need to for model training. To do the same process for test set, request `test.json` at [wangcongcongcc@gmail.com](wangcongcongcc@gmail.com) first and make some changes in `prepare.py` accordingly to prepare the test set.
 
 #### Fine-tune T5
 To skip the following time-consuming fine-tuning, it is recommended to download the already fine-tuned model from [here](https://drive.google.com/file/d/1tuI54jDK7OfiVemninyZbUo3sybYHosg/view?usp=sharing), which is fine-tuned on T5-large with 12 epochs (corresponding to run-1 in the paper) and ready for predictions. After downloading, unzip and put it `./tmp/` (create it first).
@@ -83,14 +84,21 @@ cd ttt
 pip install -e .
 ````
 
-Start fine-tuning
+Start fine-tuning with Tensorflow2.0
 
 ```
 python finetune.py --model_select t5-small --data_path data/final --task t2t --per_device_train_batch_size 8 --num_epochs_train 12 --max_src_length 512 --max_tgt_length 78 --lr 5e-5 --schedule warmuplinear --warmup_ratio 0.1 --log_steps -1 --keep_ck_num 3 --use_gpu --source_field_name source --target_field_name target
 ```
 
+Or you prefer fine-tuning with PyTorch.
+
+```python
+python finetune_pt.py
+```
+
 Reminders
-* Try `python finetune.py --help` to know the flags.
+* Try `python finetune.py --help` or `python finetune_pt.py --help` to know the flags.
+* `finetune_pt.py` has the same set of flags as the TF one using one GPU by default. To manipulate the flags, have a look at the script.
 * Here we fine-tune a T5-small with GPU as an example. If you have more resources like TPUs to train larger models, just change flag `--use-gpu`, to `--use_tpu` and add an extra flag `--tpu_address x.x.x.x`. 
 
 After the fine-tuning is done, the training details and model weights (checkpoints of last three epochs) can be found at `./tmp/{model_save_path}`.
