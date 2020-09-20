@@ -1,4 +1,4 @@
-##### This unit guides to reproduce the results in our paper titled "UCD-CS at W-NUT 2020 Shared Task-3: Leveraging Text to TextTransformers for COVID-19 Event Extraction on Social Media" (paper link comming soon)
+### This unit guides to reproduce the results in our paper titled "UCD-CS at W-NUT 2020 Shared Task-3: Leveraging Text to TextTransformers for COVID-19 Event Extraction on Social Media" (paper link comming soon)
 
 <p align="center">
     <br>
