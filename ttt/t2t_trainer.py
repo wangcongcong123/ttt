@@ -207,7 +207,6 @@ class T2TTrainer():
                             evaluate(global_step, tag="global_step")
                         logger.info(f"train loss at global_step {global_step}: {epoch_total_loss / num_batches}")
 
-                train_loss = epoch_total_loss / num_batches
 
                 if self.args.log_steps == -1:
                     if self.args.do_eval:
@@ -216,10 +215,10 @@ class T2TTrainer():
                         self._tb_writer.add_scalar("train_loss_epoch", epoch_total_loss / num_batches,
                                                    global_step)
                         self._tb_writer.add_scalar("train_lr_epoch", optimizer.lr.numpy(), global_step)
-                    logger.info(f"train loss at end of epoch {epoch}: {train_loss}")
+                    logger.info(f"train loss at end of epoch {epoch}: {epoch_total_loss / num_batches}")
 
                 if not self.args.do_eval:
                     # if do not do evaluate, the checkpoint at the end of epoch needs to be saved
-                    self.save_ck(model, epoch, tag="epoch")
+                    self.save_ck(model, epoch+1, tag="epoch")
             if self.use_tb:
                 self._tb_writer.close()

@@ -1,0 +1,114 @@
+2020-09-07 21:59:51,553.553 INFO inputs - get_with_prepare_func: reading cached data from data/covid_event/t5-large-data.pkl
+2020-09-07 21:59:51,553.553 WARNING inputs - get_with_prepare_func: if you changed the max_seq_length/max_src_length/max_tgt_length, this may not correctly loaded, since the data/covid_event/t5-large-data.pkl is pickled based on first time loading
+2020-09-07 21:59:59,860.860 INFO utils - create_model: All TPU devices: 
+2020-09-07 21:59:59,860.860 INFO utils - create_model: LogicalDevice(name='/job:worker/replica:0/task:0/device:TPU:7', device_type='TPU')
+2020-09-07 21:59:59,860.860 INFO utils - create_model: LogicalDevice(name='/job:worker/replica:0/task:0/device:TPU:6', device_type='TPU')
+2020-09-07 21:59:59,860.860 INFO utils - create_model: LogicalDevice(name='/job:worker/replica:0/task:0/device:TPU:5', device_type='TPU')
+2020-09-07 21:59:59,860.860 INFO utils - create_model: LogicalDevice(name='/job:worker/replica:0/task:0/device:TPU:4', device_type='TPU')
+2020-09-07 21:59:59,860.860 INFO utils - create_model: LogicalDevice(name='/job:worker/replica:0/task:0/device:TPU:0', device_type='TPU')
+2020-09-07 21:59:59,860.860 INFO utils - create_model: LogicalDevice(name='/job:worker/replica:0/task:0/device:TPU:1', device_type='TPU')
+2020-09-07 21:59:59,860.860 INFO utils - create_model: LogicalDevice(name='/job:worker/replica:0/task:0/device:TPU:2', device_type='TPU')
+2020-09-07 21:59:59,860.860 INFO utils - create_model: LogicalDevice(name='/job:worker/replica:0/task:0/device:TPU:3', device_type='TPU')
+2020-09-07 22:01:40,501.501 INFO utils - create_model: None
+2020-09-07 22:01:40,938.938 INFO t2t_trainer - train: start training at epoch = 0
+2020-09-07 22:01:40,938.938 INFO t2t_trainer - train: global train batch size = 16
+2020-09-07 22:01:40,938.938 INFO t2t_trainer - train: using learning rate scheduler: warmuplinear
+2020-09-07 22:01:40,938.938 INFO t2t_trainer - train: total_steps: 21708, steps_per_epoch: 1809
+2020-09-07 22:01:40,938.938 INFO t2t_trainer - train: warmup_steps:2170
+2020-09-07 22:30:06,563.563 INFO t2t_trainer - train: train loss at end of epoch 0: 144.05117502817632
+2020-09-07 22:30:06,565.565 INFO t2t_trainer - save_ck: save model weights to tmp/t5-large_translation_covid_event/ck_at_epoch_0.h5
+2020-09-07 22:30:19,389.389 INFO t2t_trainer - train: start training at epoch = 1
+2020-09-07 22:30:19,389.389 INFO t2t_trainer - train: global train batch size = 16
+2020-09-07 22:30:19,389.389 INFO t2t_trainer - train: using learning rate scheduler: warmuplinear
+2020-09-07 22:30:19,389.389 INFO t2t_trainer - train: total_steps: 21708, steps_per_epoch: 1809
+2020-09-07 22:30:19,389.389 INFO t2t_trainer - train: warmup_steps:2170
+2020-09-07 22:42:43,364.364 INFO t2t_trainer - train: train loss at end of epoch 1: 1.0729178690272778
+2020-09-07 22:42:43,365.365 INFO t2t_trainer - save_ck: save model weights to tmp/t5-large_translation_covid_event/ck_at_epoch_1.h5
+2020-09-07 22:42:55,281.281 INFO t2t_trainer - train: start training at epoch = 2
+2020-09-07 22:42:55,282.282 INFO t2t_trainer - train: global train batch size = 16
+2020-09-07 22:42:55,282.282 INFO t2t_trainer - train: using learning rate scheduler: warmuplinear
+2020-09-07 22:42:55,282.282 INFO t2t_trainer - train: total_steps: 21708, steps_per_epoch: 1809
+2020-09-07 22:42:55,282.282 INFO t2t_trainer - train: warmup_steps:2170
+2020-09-07 22:55:21,735.735 INFO t2t_trainer - train: train loss at end of epoch 2: 0.7845621262859778
+2020-09-07 22:55:21,736.736 INFO t2t_trainer - save_ck: save model weights to tmp/t5-large_translation_covid_event/ck_at_epoch_2.h5
+2020-09-07 22:55:35,783.783 INFO t2t_trainer - train: start training at epoch = 3
+2020-09-07 22:55:35,784.784 INFO t2t_trainer - train: global train batch size = 16
+2020-09-07 22:55:35,784.784 INFO t2t_trainer - train: using learning rate scheduler: warmuplinear
+2020-09-07 22:55:35,784.784 INFO t2t_trainer - train: total_steps: 21708, steps_per_epoch: 1809
+2020-09-07 22:55:35,784.784 INFO t2t_trainer - train: warmup_steps:2170
+2020-09-07 23:08:00,730.730 INFO t2t_trainer - train: train loss at end of epoch 3: 0.6215832809108836
+2020-09-07 23:08:00,731.731 INFO t2t_trainer - save_ck: there are already 3 checkpoints saved that will be more than keep_ck_num=3
+2020-09-07 23:08:00,731.731 INFO t2t_trainer - save_ck: hence, remove the oldest one: tmp/t5-large_translation_covid_event/ck_at_epoch_0.h5
+2020-09-07 23:08:01,097.097 INFO t2t_trainer - save_ck: save model weights to tmp/t5-large_translation_covid_event/ck_at_epoch_3.h5
+2020-09-07 23:08:12,035.035 INFO t2t_trainer - train: start training at epoch = 4
+2020-09-07 23:08:12,035.035 INFO t2t_trainer - train: global train batch size = 16
+2020-09-07 23:08:12,035.035 INFO t2t_trainer - train: using learning rate scheduler: warmuplinear
+2020-09-07 23:08:12,035.035 INFO t2t_trainer - train: total_steps: 21708, steps_per_epoch: 1809
+2020-09-07 23:08:12,035.035 INFO t2t_trainer - train: warmup_steps:2170
+2020-09-07 23:20:35,271.271 INFO t2t_trainer - train: train loss at end of epoch 4: 0.50728934064699
+2020-09-07 23:20:35,272.272 INFO t2t_trainer - save_ck: there are already 3 checkpoints saved that will be more than keep_ck_num=3
+2020-09-07 23:20:35,272.272 INFO t2t_trainer - save_ck: hence, remove the oldest one: tmp/t5-large_translation_covid_event/ck_at_epoch_1.h5
+2020-09-07 23:20:35,691.691 INFO t2t_trainer - save_ck: save model weights to tmp/t5-large_translation_covid_event/ck_at_epoch_4.h5
+2020-09-07 23:20:44,568.568 INFO t2t_trainer - train: start training at epoch = 5
+2020-09-07 23:20:44,568.568 INFO t2t_trainer - train: global train batch size = 16
+2020-09-07 23:20:44,568.568 INFO t2t_trainer - train: using learning rate scheduler: warmuplinear
+2020-09-07 23:20:44,568.568 INFO t2t_trainer - train: total_steps: 21708, steps_per_epoch: 1809
+2020-09-07 23:20:44,568.568 INFO t2t_trainer - train: warmup_steps:2170
+2020-09-07 23:33:08,921.921 INFO t2t_trainer - train: train loss at end of epoch 5: 0.4129441963964862
+2020-09-07 23:33:08,922.922 INFO t2t_trainer - save_ck: there are already 3 checkpoints saved that will be more than keep_ck_num=3
+2020-09-07 23:33:08,922.922 INFO t2t_trainer - save_ck: hence, remove the oldest one: tmp/t5-large_translation_covid_event/ck_at_epoch_2.h5
+2020-09-07 23:33:09,288.288 INFO t2t_trainer - save_ck: save model weights to tmp/t5-large_translation_covid_event/ck_at_epoch_5.h5
+2020-09-07 23:33:17,834.834 INFO t2t_trainer - train: start training at epoch = 6
+2020-09-07 23:33:17,834.834 INFO t2t_trainer - train: global train batch size = 16
+2020-09-07 23:33:17,834.834 INFO t2t_trainer - train: using learning rate scheduler: warmuplinear
+2020-09-07 23:33:17,834.834 INFO t2t_trainer - train: total_steps: 21708, steps_per_epoch: 1809
+2020-09-07 23:33:17,834.834 INFO t2t_trainer - train: warmup_steps:2170
+2020-09-07 23:45:39,810.810 INFO t2t_trainer - train: train loss at end of epoch 6: 0.34766357622586597
+2020-09-07 23:45:39,813.813 INFO t2t_trainer - save_ck: there are already 3 checkpoints saved that will be more than keep_ck_num=3
+2020-09-07 23:45:39,813.813 INFO t2t_trainer - save_ck: hence, remove the oldest one: tmp/t5-large_translation_covid_event/ck_at_epoch_3.h5
+2020-09-07 23:45:40,221.221 INFO t2t_trainer - save_ck: save model weights to tmp/t5-large_translation_covid_event/ck_at_epoch_6.h5
+2020-09-07 23:45:49,928.928 INFO t2t_trainer - train: start training at epoch = 7
+2020-09-07 23:45:49,928.928 INFO t2t_trainer - train: global train batch size = 16
+2020-09-07 23:45:49,928.928 INFO t2t_trainer - train: using learning rate scheduler: warmuplinear
+2020-09-07 23:45:49,929.929 INFO t2t_trainer - train: total_steps: 21708, steps_per_epoch: 1809
+2020-09-07 23:45:49,929.929 INFO t2t_trainer - train: warmup_steps:2170
+2020-09-07 23:58:28,345.345 INFO t2t_trainer - train: train loss at end of epoch 7: 0.29620171093390696
+2020-09-07 23:58:28,346.346 INFO t2t_trainer - save_ck: there are already 3 checkpoints saved that will be more than keep_ck_num=3
+2020-09-07 23:58:28,346.346 INFO t2t_trainer - save_ck: hence, remove the oldest one: tmp/t5-large_translation_covid_event/ck_at_epoch_4.h5
+2020-09-07 23:58:28,736.736 INFO t2t_trainer - save_ck: save model weights to tmp/t5-large_translation_covid_event/ck_at_epoch_7.h5
+2020-09-07 23:58:37,138.138 INFO t2t_trainer - train: start training at epoch = 8
+2020-09-07 23:58:37,138.138 INFO t2t_trainer - train: global train batch size = 16
+2020-09-07 23:58:37,138.138 INFO t2t_trainer - train: using learning rate scheduler: warmuplinear
+2020-09-07 23:58:37,138.138 INFO t2t_trainer - train: total_steps: 21708, steps_per_epoch: 1809
+2020-09-07 23:58:37,138.138 INFO t2t_trainer - train: warmup_steps:2170
+2020-09-08 00:10:59,173.173 INFO t2t_trainer - train: train loss at end of epoch 8: 0.24166541466643368
+2020-09-08 00:10:59,174.174 INFO t2t_trainer - save_ck: there are already 3 checkpoints saved that will be more than keep_ck_num=3
+2020-09-08 00:10:59,175.175 INFO t2t_trainer - save_ck: hence, remove the oldest one: tmp/t5-large_translation_covid_event/ck_at_epoch_5.h5
+2020-09-08 00:10:59,680.680 INFO t2t_trainer - save_ck: save model weights to tmp/t5-large_translation_covid_event/ck_at_epoch_8.h5
+2020-09-08 00:11:09,666.666 INFO t2t_trainer - train: start training at epoch = 9
+2020-09-08 00:11:09,666.666 INFO t2t_trainer - train: global train batch size = 16
+2020-09-08 00:11:09,666.666 INFO t2t_trainer - train: using learning rate scheduler: warmuplinear
+2020-09-08 00:11:09,666.666 INFO t2t_trainer - train: total_steps: 21708, steps_per_epoch: 1809
+2020-09-08 00:11:09,666.666 INFO t2t_trainer - train: warmup_steps:2170
+2020-09-08 00:23:31,439.439 INFO t2t_trainer - train: train loss at end of epoch 9: 0.1981308291555007
+2020-09-08 00:23:31,440.440 INFO t2t_trainer - save_ck: there are already 3 checkpoints saved that will be more than keep_ck_num=3
+2020-09-08 00:23:31,440.440 INFO t2t_trainer - save_ck: hence, remove the oldest one: tmp/t5-large_translation_covid_event/ck_at_epoch_6.h5
+2020-09-08 00:23:31,846.846 INFO t2t_trainer - save_ck: save model weights to tmp/t5-large_translation_covid_event/ck_at_epoch_9.h5
+2020-09-08 00:23:41,433.433 INFO t2t_trainer - train: start training at epoch = 10
+2020-09-08 00:23:41,433.433 INFO t2t_trainer - train: global train batch size = 16
+2020-09-08 00:23:41,433.433 INFO t2t_trainer - train: using learning rate scheduler: warmuplinear
+2020-09-08 00:23:41,433.433 INFO t2t_trainer - train: total_steps: 21708, steps_per_epoch: 1809
+2020-09-08 00:23:41,433.433 INFO t2t_trainer - train: warmup_steps:2170
+2020-09-08 00:36:03,731.731 INFO t2t_trainer - train: train loss at end of epoch 10: 0.1577673581983842
+2020-09-08 00:36:03,732.732 INFO t2t_trainer - save_ck: there are already 3 checkpoints saved that will be more than keep_ck_num=3
+2020-09-08 00:36:03,732.732 INFO t2t_trainer - save_ck: hence, remove the oldest one: tmp/t5-large_translation_covid_event/ck_at_epoch_7.h5
+2020-09-08 00:36:04,471.471 INFO t2t_trainer - save_ck: save model weights to tmp/t5-large_translation_covid_event/ck_at_epoch_10.h5
+2020-09-08 00:36:17,836.836 INFO t2t_trainer - train: start training at epoch = 11
+2020-09-08 00:36:17,836.836 INFO t2t_trainer - train: global train batch size = 16
+2020-09-08 00:36:17,836.836 INFO t2t_trainer - train: using learning rate scheduler: warmuplinear
+2020-09-08 00:36:17,836.836 INFO t2t_trainer - train: total_steps: 21708, steps_per_epoch: 1809
+2020-09-08 00:36:17,836.836 INFO t2t_trainer - train: warmup_steps:2170
+2020-09-08 00:48:38,736.736 INFO t2t_trainer - train: train loss at end of epoch 11: 0.13311179534950685
+2020-09-08 00:48:38,737.737 INFO t2t_trainer - save_ck: there are already 3 checkpoints saved that will be more than keep_ck_num=3
+2020-09-08 00:48:38,737.737 INFO t2t_trainer - save_ck: hence, remove the oldest one: tmp/t5-large_translation_covid_event/ck_at_epoch_8.h5
+2020-09-08 00:48:39,441.441 INFO t2t_trainer - save_ck: save model weights to tmp/t5-large_translation_covid_event/ck_at_epoch_11.h5

@@ -19,10 +19,10 @@ if __name__ == '__main__':
     args.max_src_length=128
     args.max_tgt_length=128
     args.eval_batch_size = 8
-    args.log_steps = 400
+    args.log_steps = 1000
+    args.source_field_name = "text"
+    args.target_field_name = "label"
     args.per_device_train_batch_size = 2
-    args.source_field_name="source"
-    args.target_field_name="target"
     args.eval_on="bleu" #this refers to sacrebleu as used in T5 paper
     # any one from LR_SCHEDULER_SUPPORT (check:ttt/args.py)
     args.scheduler = "warmuplinear"

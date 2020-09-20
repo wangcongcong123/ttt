@@ -89,7 +89,7 @@ def read_t2t_examples(data_path, source_field_name="text", target_field_name="la
     source_texts = []
     target_texts = []
     other_attributes = []
-    with open(data_path, "r") as f:
+    with open(data_path, "r",encoding="utf-8") as f:
         for line in tqdm(f, desc=f"reading from {data_path}"):
             example = json.loads(line.strip())
 
@@ -141,6 +141,7 @@ def shift_to_right(input_ids, decoder_start_token_id):
     shifted_input_ids = np.zeros(input_ids.shape, dtype=input_ids.dtype)
     shifted_input_ids[..., 1:] = input_ids[..., :-1]
     shifted_input_ids[..., 0] = decoder_start_token_id
+    # shifted_input_ids[shifted_input_ids == 0] = -100
     return shifted_input_ids
 
 
@@ -178,7 +179,6 @@ def tokenize_with_progress_bar(tokenizer, args, text_list, batch_size=1000):
     from transformers import BatchEncoding
     return BatchEncoding(data=encoded_return)
 
-
 def tokenizet2t(tokenizer, args, source_text, target_text, batch_size=None):
     # this method is similar to T5Tokenizer.prepare_seq2seq_batch, it is rewritten here to get more control and flexibility
     logger.info(f"encoding source examples (num={len(source_text)})")
@@ -213,7 +213,7 @@ def prepare_t2t_inputs(tokenizer, args, load_train_num=-1, tokenize_batch_size=N
                                                                   source_field_name=args.source_field_name,
                                                                   target_field_name=args.target_field_name)
     if load_train_num > 0:
-        assert load_train_num <= len(source_texts_train), f"there are {len(source_texts_train)} training examples"
+        # assert load_train_num <= len(source_texts_train), f"there are {len(source_texts_train)} training examples"
         logger.info(f"loading only {load_train_num} training examples out of the totaling {len(source_texts_train)}")
         source_texts_train = source_texts_train[:load_train_num]
         target_texts_train = target_texts_train[:load_train_num]
@@ -254,7 +254,6 @@ def prepare_t2t_inputs(tokenizer, args, load_train_num=-1, tokenize_batch_size=N
         target_input_ids, target_attention_mask = encoded_target["input_ids"], encoded_target["attention_mask"]
         # target_input_ids[target_input_ids == 0] = -100
         # in t5 trainer, eval lm labels are not used for calculating loss but for generation comparison, os we do not apply -100 replacement here
-
         # x_eval = [source_input_ids, source_attention_mask, shift_to_right(target_input_ids, decoder_start_token_id),
         #           target_attention_mask]
         x_eval = {"source_input_ids": source_input_ids, "source_attention_mask": source_attention_mask,
@@ -315,14 +314,17 @@ def get_inputs(tokenizer, args):
     add_filehandler_for_logger(args.output_path, logger)
     if args.task == "single-label-cls":
         inputs = get_with_prepare_func(tokenizer, args, prepare_seq_single_cls_inputs, check_cache=True,
-                                       load_train_num=100000)
+                                       load_train_num=-1)
         args.input_seq_length = inputs["x_train"][0].shape[-1]
         args.label2id = inputs["label2id"]
         return inputs
     elif args.task == "t2t" or args.task == "translation" or args.task == "pretrain":
         args.is_pretrain = args.task == "pretrain"
-        tokenize_batch_size = 1000 if args.task == "pretrain" else None
-        data_dict = get_with_prepare_func(tokenizer, args, prepare_t2t_inputs, check_cache=True, load_train_num=-1,
+
+        tokenize_batch_size=args.tokenize_batch_size if hasattr(args,"tokenize_batch_size") else None
+        load_train_num=args.load_train_num if hasattr(args,"load_train_num") else -1
+
+        data_dict = get_with_prepare_func(tokenizer, args, prepare_t2t_inputs, check_cache=True, load_train_num=load_train_num,
                                           tokenize_batch_size=tokenize_batch_size)
         args.source_sequence_length = data_dict["x_train"]["source_input_ids"].shape[-1]
         args.target_sequence_length = data_dict["y_train"]["target_input_ids"].shape[-1]

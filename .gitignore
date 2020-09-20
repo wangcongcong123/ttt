@@ -13,3 +13,5 @@ chinese/
 dist/
 pytriplet.egg-info/
 demos/
+externals/
+covid_event/congcongwang/

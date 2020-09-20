@@ -18,10 +18,12 @@ if __name__ == '__main__':
     args.data_path = "data/glue/sst2"
     # any one from TASKS_SUPPORT (check:ttt/args.py)
     args.task = "t2t"
-    args.log_steps = 1000
+
+    args.log_steps = -1
     args.eval_batch_size=32
     args.per_device_train_batch_size=8
     args.max_src_length=128
+    args.load_train_num = 1000
     # any one from LR_SCHEDULER_SUPPORT (check:ttt/args.py)
     args.scheduler = "warmuplinear"
     args.lr=5e-5

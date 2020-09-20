@@ -72,18 +72,19 @@ def create_t2t_model(model_name_or_path, args, tokenizer=None,from_pretrained=Tr
             assert encoder_config.eos_token_id==tokenizer.eos_token_id
             assert encoder_config.decoder_start_token_id==tokenizer.pad_token_id
         encoder = TFT5ForConditionalGeneration(encoder_config)
+        # build the model with dummy_inputs
+        encoder(encoder.dummy_inputs, training=False)
 
     if not os.path.isfile(os.path.join(args.output_path, "config.json")):
         encoder_config.save_pretrained(args.output_path)
-
     return encoder
 
 
-def get_model(args,tokenizer=None):
+def get_model(args,tokenizer=None,from_pretrained=True):
     if args.task == "single-label-cls":
         return create_sl_cls_model(args.model_select, args.input_seq_length, args)
     elif args.task == "t2t" or args.task == "translation" or args.task == "pretrain":
-        return create_t2t_model(args.model_select, args, tokenizer=tokenizer,from_pretrained=args.task != "pretrain")
+        return create_t2t_model(args.model_select, args, tokenizer=tokenizer,from_pretrained=from_pretrained)
     else:
         # when more task are supported -> todo
         pass

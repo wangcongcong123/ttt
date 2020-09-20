@@ -70,7 +70,7 @@ def get_callbacks(args, inputs, logger, eval_getter):
         return [tqdm_callback, lr_scheduler_callback]
 
 
-def create_model(args, logger, model_getter,tokenizer=None):
+def create_model(args, logger, model_getter,tokenizer=None,from_pretrained=True,save_args=True):
     if args.use_tpu:
         # Create distribution strategy
         tpu = tf.distribute.cluster_resolver.TPUClusterResolver(tpu='grpc://' + args.tpu_address)
@@ -82,7 +82,7 @@ def create_model(args, logger, model_getter,tokenizer=None):
         strategy = tf.distribute.TPUStrategy(tpu)
         # Create model
         with strategy.scope():
-            model = model_getter(args,tokenizer=tokenizer)
+            model = model_getter(args,tokenizer=tokenizer,from_pretrained=from_pretrained)
     else:
         if args.use_gpu:
             # Create a MirroredStrategy.
@@ -90,13 +90,14 @@ def create_model(args, logger, model_getter,tokenizer=None):
             logger.info("Number of GPU devices: {}".format(strategy.num_replicas_in_sync))
             # Open a strategy scope.
             with strategy.scope():
-                model = model_getter(args,tokenizer=tokenizer)
+                model = model_getter(args,tokenizer=tokenizer,from_pretrained=from_pretrained)
         else:
             raise ValueError("not available yet")
             # strategy = None
             # logger.info("Using CPU for training")
             # model = model_getter(args)
-    # logger.info(model.summary())
+
+    logger.info(model.summary())
     # trainable_count = int(
     #     np.sum([K.count_params(p) for p in set(model.trainable_weights)]))
     # non_trainable_count = int(
@@ -106,7 +107,8 @@ def create_model(args, logger, model_getter,tokenizer=None):
     # logger.info('Non-trainable params: {:,}'.format(non_trainable_count))
     # if strategy!=None:
     args.num_replicas_in_sync = strategy.num_replicas_in_sync
-    write_args(args.output_path, args)
+    if save_args:
+        write_args(args.output_path, args)
     return model, strategy
 
 def get_tokenizer(args):

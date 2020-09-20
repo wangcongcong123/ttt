@@ -16,7 +16,7 @@ if __name__ == '__main__':
     args.data_path = "data/glue/sst2"
     # any one from TASKS_SUPPORT (check:ttt/args.py)
     args.task = "single-label-cls"
-    args.log_steps = 400
+    args.log_steps = 1000
     # any one from LR_SCHEDULER_SUPPORT (check:ttt/args.py)
     args.scheduler="warmuplinear"
     # set do_eval = False if your data does not contain a validation set. In that case, patience, and early_stop will be invalid

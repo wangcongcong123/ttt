@@ -158,9 +158,6 @@ def sanity_check(args,logger=None):
         assert "t5" in args.model_select, "pretrain task now is only compatible with T5 models so far"
 
 
-
-
-
 class Args:
     '''
     a Args class that maintain the same default args as argparse.ArgumentParser
@@ -201,13 +198,13 @@ class Args:
 def get_args():
     parser = argparse.ArgumentParser(description='Hyper params')
 
-    parser.add_argument('--model_select', type=str, default="bert-base-uncased",
+    parser.add_argument('--model_select', type=str, default="t5-small",
                         help='model select from MODEL_MAP')
 
     parser.add_argument('--data_path', type=str, default="data/glue/sst2",
                         help='data path')
 
-    parser.add_argument('--task', type=str, default="single-label-cls",
+    parser.add_argument('--task', type=str, default="t2t",
                         help='tasks available in TASKS_SUPPORT')
 
     parser.add_argument('--per_device_train_batch_size', type=int, default=8,
