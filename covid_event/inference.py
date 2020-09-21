@@ -18,4 +18,4 @@ inputs = tokenizer.encode(source, return_tensors="tf")  # Batch size 1. change "
 result = model.generate(inputs)
 
 print(tokenizer.decode(result[0]))
-# output: *Prince Charles
+# output: Prince Charles
