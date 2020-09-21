@@ -28,6 +28,7 @@ source = "context: *Prince Charles tests positive for Corona* Prince William kno
 
 inputs = tokenizer.encode(source, return_tensors="tf")  # Batch size 1. change "tf" to "pt" if using pytorch model
 result = model.generate(inputs)
+# output: Prince Charles
 ```
 
 Quick links: 
