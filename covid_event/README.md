@@ -123,3 +123,15 @@ python submit.py
 
 After this, the converted predictions are saved to `subs/val-run-1/`. We now have the runs ready for evaluation (the same as the test runs as mentioned in the [quick reproduction](#quick) section). 
 
+
+#### Citation
+```
+@misc{wang2020ucdcs,
+    title={UCD-CS at W-NUT 2020 Shared Task-3: A Text to Text Approach for COVID-19 Event Extraction on Social Media},
+    author={Congcong Wang and David Lillis},
+    year={2020},
+    eprint={2009.10047},
+    archivePrefix={arXiv},
+    primaryClass={cs.CL}
+}
+```
