@@ -8,7 +8,6 @@ from sklearn.metrics import accuracy_score, classification_report
 transformers.logging.set_verbosity_info()
 logger = transformers.logging.get_logger()
 
-
 def get_scheduler(optimizer, scheduler: str, warmup_steps: int, num_total: int):
     assert scheduler in ["constantlr", "warmuplinear", "warmupconstant", "warmupcosine",
                          "warmupcosinewithhardrestarts"], (
@@ -28,35 +27,34 @@ def get_scheduler(optimizer, scheduler: str, warmup_steps: int, num_total: int):
                                                                                num_warmup_steps=warmup_steps,
                                                                                num_training_steps=num_total)
 
-
 # we use transformers logger here so we can log message to a file locally
 if __name__ == '__main__':
     args = get_args()
     ############### customize args
+    # args.dataset_name = "c_data"
+    # args.model_select = "t5-small-ex-pretrain"
+    # args.from_pretrained = False
+
     args.dataset_name = "c_data"
-    args.model_select = "t5-small-ex-pretrain"
-    args.from_pretrained = False
+    args.model_select = "t5-small"
+    args.from_pretrained = True
 
     args.load_train_num = -1
     args.load_val_num = -1
     args.batch_size = 8
-    args.epochs = 12
-    args.do_eval = True  # eval at end of epoch
-    args.log_steps = -1  # eval at end of epoch
-    args.lr = 5e-5
-    args.scheduler = "warmuplinear"
-    args.warmup_steps = 0.1
+    args.epochs = 6
+    args.log_steps = 400
+    args.lr = 2e-4
+    args.do_eval = True
+    args.scheduler = "constantlr"
+    # args.warmup_steps = 0.1
     args.grad_norm_clip = 1.0
-
     ##################
     add_filehandler_for_logger(".", logger)
 
-    # The following may be necessary
-    # pyarrow_path = r"C:\Users\USERNAME\.cache\huggingface\datasets\{}\default\0.0.0".format(args.dataset_name)
-    # if not sys.platform.startswith("win"):
-    #     pyarrow_path = f"/home/USERNAME/.cache/huggingface/datasets/{args.dataset_name}/default/0.0.0"
-    # if not os.path.isdir(pyarrow_path):
-    #     os.makedirs(pyarrow_path, exist_ok=True)
+    pyarrow_path = r"C:\Users\wangc\.cache\huggingface\datasets\{}\default\0.0.0".format(args.dataset_name)
+    if not os.path.isdir(pyarrow_path):
+        os.makedirs(pyarrow_path, exist_ok=True)
 
     dataset = load_dataset(f"{args.dataset_name}.py")
 
@@ -70,7 +68,6 @@ if __name__ == '__main__':
 
     tokenizer = T5Tokenizer.from_pretrained(args.model_select)
 
-
     def convert_to_features(example_batch):
         encoded_source = tokenizer(example_batch["source"])
         encoded_target = tokenizer(example_batch["target"])
@@ -78,9 +75,7 @@ if __name__ == '__main__':
             {"labels": encoded_target["input_ids"], "decoder_attention_mask": encoded_target["attention_mask"]})
         return encoded_source
 
-
     def collate_fn(examples):
-        # dynamically padding
         source_inputs = [{"input_ids": each["input_ids"], "attention_mask": each["attention_mask"]} for each in
                          examples]
         target_inputs = [{"input_ids": each["labels"], "attention_mask": each["decoder_attention_mask"]} for each in
@@ -90,7 +85,6 @@ if __name__ == '__main__':
         source_inputs_padded.update({"labels": target_inputs_padded["input_ids"],
                                      "decoder_attention_mask": target_inputs_padded["attention_mask"]})
         return source_inputs_padded
-
 
     encoded = dataset.map(convert_to_features, batched=True)
     columns = ['input_ids', 'attention_mask', 'labels', 'decoder_attention_mask']
@@ -115,20 +109,29 @@ if __name__ == '__main__':
     ]
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+    if torch.cuda.is_available():
+        device = torch.cuda.current_device()
+        model = torch.nn.DataParallel(model).to(device)
+
     model.train().to(device)
     scheduler = get_scheduler(optimizer, scheduler=args.scheduler, warmup_steps=int(0.1 * len(train_dataloader)),
                               num_total=args.epochs * len(train_dataloader))
 
-
-    def evaluate():
+    def evaluate(val_dataloader):
         model.eval()
         gts = []
         preds = []
         for batch in tqdm(val_dataloader, total=len(val_dataloader), desc="evaluating..."):
             with torch.no_grad():
                 batch.to(device)
-                predictions = model.generate(input_ids=batch["input_ids"],
-                                             attention_mask=batch["attention_mask"])
+                if isinstance(model,torch.nn.DataParallel):
+                    predictions = model.module.generate(input_ids=batch["input_ids"],
+                                                 attention_mask=batch["attention_mask"])
+                else:
+                    predictions = model.generate(input_ids=batch["input_ids"],
+                                                        attention_mask=batch["attention_mask"])
+
                 pred = [tokenizer.decode(ids) for ids in predictions]
                 gt = [tokenizer.decode(ids) for ids in batch["labels"]]
                 preds.extend(pred)
@@ -146,6 +149,7 @@ if __name__ == '__main__':
         pbar = tqdm(enumerate(train_dataloader), total=len(train_dataloader))
         for it, batch in pbar:
             batch.to(device)
+
             outputs = model(**batch, return_dict=True)
             loss = outputs.loss
             loss = loss.mean()  # collapse all losses if they are scattered on multiple gpus
@@ -160,15 +164,15 @@ if __name__ == '__main__':
                 f"training - epoch {epoch + 1}/{args.epochs} iter {it}: train loss {loss.item():.5f}. lr {scheduler.get_last_lr()[0]:e}")
 
             if args.log_steps > 0 and (base_steps + it + 1) % args.log_steps == 0:
-                logger.info(f'Step {base_steps + it + 1} - mean train loss: {np.mean(losses):.3}')
                 logger.info(f"evaluate at global step = {base_steps + it + 1}")
+                logger.info(f'Step {base_steps + it + 1} - mean train loss: {np.mean(losses):.3}')
                 if args.do_eval:
                     evaluate()
                     model.train()
 
-        if args.log_steps < 0:
-            logger.info(f'Epoch {epoch + 1} - mean train loss: {np.mean(losses):.3}')
-            logger.info(f"evaluate at epoch = {base_steps + it + 1}")
-            if args.do_eval:
-                evaluate()
-                model.train()
+            if args.log_steps < 0:
+                logger.info(f'Epoch {epoch + 1} - mean train loss: {np.mean(losses):.3}')
+                logger.info(f"evaluate at epoch = {base_steps + it + 1}")
+                if args.do_eval:
+                    evaluate()
+                    model.train()

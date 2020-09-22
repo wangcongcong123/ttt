@@ -4,8 +4,8 @@ with open("README.md", mode="r", encoding="utf-8") as readme_file:
     readme = readme_file.read()
 
 setup(
-    name="pytriplet",
-    version="0.0.0.1",
+    name="ttt",  # named pytriplet in pypi to avoid repeated name
+    version="0.0.3",
     author="Congcong Wang",
     author_email="wangcongcongcc@gmail.com",
     description="Fine-tuning Transformers with TPUs or GPUs acceleration, written in Tensorflow2.0",
@@ -13,7 +13,7 @@ setup(
     long_description_content_type="text/markdown",
     license="MIT License",
     url="https://github.com/wangcongcong123/ttt",
-    download_url="https://github.com/wangcongcong123/ttt/releases/download/v0.0.0.1/pytriplet.tar.gz",
+    download_url="https://github.com/wangcongcong123/ttt/releases/download/v0.0.3/pytriplet.tar.gz",
     packages=find_packages(),
     install_requires=[
         "tensorflow==2.3.0",
@@ -23,6 +23,7 @@ setup(
         "tensorboardX",
         "nlp",
         "sacrebleu",
+        "datasets",
         "transformers==3.1.0"
     ],
     classifiers=[

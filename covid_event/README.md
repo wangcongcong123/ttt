@@ -1,4 +1,4 @@
-### This unit guides to reproduce the results in our paper titled "UCD-CS at W-NUT 2020 Shared Task-3: Leveraging Text to TextTransformers for COVID-19 Event Extraction on Social Media" (paper link comming soon)
+### This unit guides to reproduce the results in our paper titled "UCD-CS at W-NUT 2020 Shared Task-3: A Text to Text Approach for COVID-19 Event Extraction on Social Media" (https://arxiv.org/abs/2009.10047)
 
 <p align="center">
     <br>
@@ -34,9 +34,8 @@ result = model.generate(inputs)
 Quick links: 
 - [the dataset release and task proposal page](https://github.com/viczong/extract_COVID19_events_from_Twitter/tree/master/shared_task)
 - [details of slot questions and candidate answers](https://docs.google.com/document/d/1OWFTXOZpoXNrDULq6PFXvIGarSZwpU-uLQRuV4wrJwI/edit)
-- [our paper - comming son](#)
 - the hyper-parameters and training process of the above demonstrated model: [args.json](extra/args.json) and [train.log](extra/train.log).
-- [the complete list](extra/unmatched.txt) of unmatched generated predictions (including "false positives" as described in the paper) of the above demonstrated model based on test set annotations that can be found [here](preds/golden).
+- [the complete list](extra/unmatched.txt) of unmatched generated predictions of the above demonstrated model based on test set annotations that can be found [here](preds/golden).
 - fine-tuned model weights (both TF2.0 and PyTorch) [downloading link](https://drive.google.com/file/d/1tuI54jDK7OfiVemninyZbUo3sybYHosg/view?usp=sharing)
 
 <a id="quick"></a>

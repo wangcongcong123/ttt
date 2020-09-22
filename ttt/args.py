@@ -117,6 +117,24 @@ def data_check(args, sample_val_from_train=True, val_sample_portion=0.1,logger=N
                 print("data not found")
                 sys.exit(0)
 
+def check_output_path(output_path,force=False):
+    if os.path.isdir(output_path):
+        if force:
+            print(f"{output_path} exists, remove it as force=True")
+            shutil.rmtree(output_path)
+            os.makedirs(output_path, exist_ok=True)
+        else:
+            out = input(
+                "Output directory ({}) already exists and is not empty, you wanna remove it before start training? (y/n)".format(
+                    output_path))
+            if out.lower() == "y":
+                shutil.rmtree(output_path)
+                os.makedirs(output_path, exist_ok=True)
+            else:
+                sys.exit(0)
+    else:
+        print(f"{output_path} not found, create it now")
+        os.makedirs(output_path, exist_ok=True)
 
 def sanity_check(args,logger=None):
     # auto-construct some args
@@ -129,17 +147,7 @@ def sanity_check(args,logger=None):
     args.output_path = output_path
 
     if args.do_train:
-        if os.path.isdir(output_path):
-            out = input(
-                "Output directory ({}) already exists and is not empty, you wanna remove it before start training? (y/n)".format(
-                    output_path))
-            if out.lower() == "y":
-                shutil.rmtree(output_path)
-                os.makedirs(output_path, exist_ok=True)
-            else:
-                sys.exit(0)
-        else:
-            os.makedirs(output_path, exist_ok=True)
+        check_output_path(output_path)
 
     assert args.model_select in MODELS_SUPPORT or os.path.isdir(args.model_select), F"set --model_select has to be in {MODELS_SUPPORT} or a local path where model's config and tokenizer_config exist"
 
