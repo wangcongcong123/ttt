@@ -11,7 +11,6 @@ from tqdm import tqdm
 from sklearn.metrics import accuracy_score, classification_report
 import numpy as np
 from keras import backend as K
-
 logging.basicConfig(
     format='%(asctime)s.%(msecs)03d %(levelname)s %(module)s - %(funcName)s: %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S',
@@ -183,42 +182,43 @@ class T2TTrainer():
                 if self.scheduler != "constant":
                     logger.info(f"warmup_steps:{self.warmup_steps}")
 
-                epoch_total_loss = 0.0
-                num_batches = 0
+                losses = []
                 pbar = tqdm(enumerate(train_dist_dataset), total=train_length)
                 for step, (x_train,y_train) in pbar:
                     # learning rate scheduler
                     update_lr(global_step)
 
                     loss = distributed_train_step(x_train,y_train)
-                    epoch_total_loss += loss.numpy()
+                    if not math.isnan(loss.numpy()):
+                        losses.append(loss.numpy())
+
                     global_step += 1
-                    num_batches += 1
                     pbar.set_description(
                         f"training - epoch {epoch + 1}/{self.args.num_epochs_train} iter {step}: train loss {loss.numpy():.5f}. lr {optimizer.lr.numpy():e}")
 
                     if self.args.log_steps != -1 and global_step % self.args.log_steps == 0:
                         if self.use_tb:
-                            self._tb_writer.add_scalar("train_loss_global_step", epoch_total_loss / num_batches,
+                            self._tb_writer.add_scalar("train_loss_global_step", np.mean(losses),
                                                        global_step)
                             self._tb_writer.add_scalar("train_lr_global_step", optimizer.lr.numpy(), global_step)
 
                         if self.args.do_eval:
                             evaluate(global_step, tag="global_step")
-                        logger.info(f"train loss at global_step {global_step}: {epoch_total_loss / num_batches}")
-
+                        logger.info(f"train loss at global_step {global_step}: {np.mean(losses)}")
+                        losses = []
 
                 if self.args.log_steps == -1:
                     if self.args.do_eval:
                         evaluate(epoch, tag="epoch")
                     if self.use_tb:
-                        self._tb_writer.add_scalar("train_loss_epoch", epoch_total_loss / num_batches,
+                        self._tb_writer.add_scalar("train_loss_epoch", np.mean(losses),
                                                    global_step)
                         self._tb_writer.add_scalar("train_lr_epoch", optimizer.lr.numpy(), global_step)
-                    logger.info(f"train loss at end of epoch {epoch}: {epoch_total_loss / num_batches}")
+                    logger.info(f"train loss at end of epoch {epoch}: {np.mean(losses)}")
 
                 if not self.args.do_eval:
                     # if do not do evaluate, the checkpoint at the end of epoch needs to be saved
                     self.save_ck(model, epoch+1, tag="epoch")
+
             if self.use_tb:
                 self._tb_writer.close()

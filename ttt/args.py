@@ -1,7 +1,7 @@
 import argparse
 from tqdm import tqdm
 from sklearn.model_selection import train_test_split
-from nlp import load_dataset
+from datasets import load_dataset
 import urllib.request
 import os, json, sys
 import shutil
@@ -136,7 +136,7 @@ def check_output_path(output_path,force=False):
         print(f"{output_path} not found, create it now")
         os.makedirs(output_path, exist_ok=True)
 
-def sanity_check(args,logger=None):
+def sanity_check(args,logger=None,force=False):
     # auto-construct some args
     # check if data exists
     data_check(args,logger=logger)
@@ -147,7 +147,7 @@ def sanity_check(args,logger=None):
     args.output_path = output_path
 
     if args.do_train:
-        check_output_path(output_path)
+        check_output_path(output_path,force=force)
 
     assert args.model_select in MODELS_SUPPORT or os.path.isdir(args.model_select), F"set --model_select has to be in {MODELS_SUPPORT} or a local path where model's config and tokenizer_config exist"
 
