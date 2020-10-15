@@ -67,7 +67,7 @@ original, source, target=iid_denoise_text(text.split(), span_length=3, corrupt_r
 # target: ['<extra_id_0>', 'is', 'short', 'for', '<extra_id_1>', 'TPUs,', 'written', 'in', 'Tensorflow2.0']
 ```
 
-#### Update (2020-09-06): Example of fine-tuning T5 for translation ([example_trans_t5.py](example_trans_t5.py))
+#### Update (2020-10-15): Example of fine-tuning T5 for translation ([example_trans_t5.py](example_trans_t5.py))
 
 <a name="wmt_en_ro_t5"></a>
 **Fine-tuning**: No boilerplate codes changed (the same as [example_t5](example_t5.py)) except for the following args:
