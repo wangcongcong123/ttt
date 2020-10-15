@@ -18,13 +18,13 @@
 from transformers import T5Tokenizer, TFT5ForConditionalGeneration, T5ForConditionalGeneration
 # the model will be downloaded automatically from Huggingface's model hub, corresponding to run-1 in the paper.
 model_name_or_path = "congcongwang/t5-large-fine-tuned-wnut-2020-task3"
-# Tensorflow2.0
-model = TFT5ForConditionalGeneration.from_pretrained(model_name_or_path)
-
 # Or try replace "congcongwang/t5-large-fine-tuned-wnut-2020-task3" with ""congcongwang/t5-base-fine-tuned-wnut-2020-task3" that is much lighter than the but still hits a decent performance (see table 2a)
 
-# or PyTorch
-# model = T5ForConditionalGeneration.from_pretrained(model_name_or_path)
+# PyTorch
+model = T5ForConditionalGeneration.from_pretrained(model_name_or_path)
+
+# Or Tensorflow2.0
+# model = TFT5ForConditionalGeneration.from_pretrained(model_name_or_path,from_pt=True)
 
 tokenizer = T5Tokenizer.from_pretrained(model_name_or_path)
 
@@ -33,7 +33,7 @@ source = "context: *Prince Charles tests positive for Corona* Prince William kno
          "choices: author of the tweet, not specified, the next in line, line to the throne, *Prince Charles," \
          " Corona* Prince William, he, the next, line, the throne."
 
-inputs = tokenizer.encode(source, return_tensors="tf")  # Batch size 1. change "tf" to "pt" if using pytorch model
+inputs = tokenizer.encode(source, return_tensors="tf")  # Batch size 1. change "pt" to "tf" if using Tensorflow2.0 model
 result = model.generate(inputs)
 # output: Prince Charles
 ```
