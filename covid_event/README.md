@@ -1,11 +1,16 @@
-### This unit guides to reproduce the results in our paper titled "UCD-CS at W-NUT 2020 Shared Task-3: A Text to Text Approach for COVID-19 Event Extraction on Social Media" (https://arxiv.org/abs/2009.10047)
+### This unit guides to reproduce the results in our paper titled "UCD-CS at W-NUT 2020 Shared Task-3: A Text to Text Approach for COVID-19 Event Extraction on Social Media" (https://arxiv.org/abs/2009.10047, [Cite](#cite)), accepted to W-NUT EMNLP 2020.
 
 <p align="center">
     <br>
     <img src="arch.png"/>
     <img src="results.png"/>
+    <img src="event_level_perf.png"/>
+        <a href="extra/unmatched.txt"><img src="mismatches.png"/></a>
     <br>
 <p>
+
+### Changelog
+- 2020-10-15, add fine-tuned t5-base model.
 
 ### Demo ([inference.py](inference.py))
 
@@ -15,6 +20,8 @@ from transformers import T5Tokenizer, TFT5ForConditionalGeneration, T5ForConditi
 model_name_or_path = "congcongwang/t5-large-fine-tuned-wnut-2020-task3"
 # Tensorflow2.0
 model = TFT5ForConditionalGeneration.from_pretrained(model_name_or_path)
+
+# Or try replace "congcongwang/t5-large-fine-tuned-wnut-2020-task3" with ""congcongwang/t5-base-fine-tuned-wnut-2020-task3" that is much lighter than the but still hits a decent performance (see table 2a)
 
 # or PyTorch
 # model = T5ForConditionalGeneration.from_pretrained(model_name_or_path)
@@ -123,7 +130,7 @@ python submit.py
 
 After this, the converted predictions are saved to `subs/val-run-1/`. We now have the runs ready for evaluation (the same as the test runs as mentioned in the [quick reproduction](#quick) section). 
 
-
+<a id="cite"></a>
 #### Citation
 ```
 @misc{wang2020ucdcs,
