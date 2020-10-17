@@ -18,7 +18,7 @@
 
 **TTT** or (**Triple T**) is short for a package for fine-tuning 🤗 **T**ransformers with **T**PUs, written in **T**ensorflow2.0+. It is motivated to be completed due to bugs I found tricky to solve when using [the xla library](https://github.com/pytorch/xla) with PyTorch. As a newcomer to the TF world, I am humble to learn more from the community and hence it is open sourced here.
 
-#### Update (2020-09-22):
+#### Update (2020-10-15):
 - [Our work at W-NUT 2020 Shared task 3 for COVID event extraction on social media](./covid_event).
 
 ## Demo 
