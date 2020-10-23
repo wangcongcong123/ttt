@@ -10,6 +10,7 @@ import tensorflow_addons as tfa
 from tensorflow import keras
 from keras import backend as K
 
+
 class LRSchudlerCallback(keras.callbacks.Callback):
     def __init__(self, args, logger):
         super(LRSchudlerCallback, self).__init__()
@@ -34,7 +35,6 @@ class LRSchudlerCallback(keras.callbacks.Callback):
             self.lr_to_reach = K.eval(self.model.optimizer.lr)
             K.set_value(self.model.optimizer.learning_rate, 0.00)
             self.logger.info(f"now set it to zero for warmup: {K.eval(self.model.optimizer.lr)}")
-
 
     def on_train_batch_end(self, batch, logs=None):
         if self.global_step <= self.warmup_steps:
@@ -70,7 +70,25 @@ def get_callbacks(args, inputs, logger, eval_getter):
         return [tqdm_callback, lr_scheduler_callback]
 
 
-def create_model(args, logger, model_getter,tokenizer=None,from_pretrained=True,save_args=True):
+def dictionize_t2t_dataset(train_inputs, eval_inputs=None):
+    dict_dataset = {}
+
+    def convert(inputs, tag="train"):
+        x, y = inputs
+        x_ = {}
+        x_["source_input_ids"] = x.pop("input_ids")
+        x_["source_attention_mask"] = x.pop("attention_mask")
+        x_["target_attention_mask"] = x.pop("decoder_attention_mask")
+
+        dict_dataset[f"x_{tag}"] = x_
+        dict_dataset[f"y_{tag}"] = {"target_input_ids": y}
+
+    convert(train_inputs, tag="train")
+    if eval_inputs is not None:
+        convert(eval_inputs, tag="eval")
+    return dict_dataset
+
+def create_model(args, logger, model_getter, tokenizer=None, from_pretrained=True, save_args=True):
     if args.use_tpu:
         # Create distribution strategy
         # checking ip address or tpu name?
@@ -85,7 +103,7 @@ def create_model(args, logger, model_getter,tokenizer=None,from_pretrained=True,
         strategy = tf.distribute.TPUStrategy(tpu)
         # Create model
         with strategy.scope():
-            model = model_getter(args,tokenizer=tokenizer,from_pretrained=from_pretrained)
+            model = model_getter(args, tokenizer=tokenizer, from_pretrained=from_pretrained)
     else:
         if args.use_gpu:
             # Create a MirroredStrategy.
@@ -93,7 +111,7 @@ def create_model(args, logger, model_getter,tokenizer=None,from_pretrained=True,
             logger.info("Number of GPU devices: {}".format(strategy.num_replicas_in_sync))
             # Open a strategy scope.
             with strategy.scope():
-                model = model_getter(args,tokenizer=tokenizer,from_pretrained=from_pretrained)
+                model = model_getter(args, tokenizer=tokenizer, from_pretrained=from_pretrained)
         else:
             raise ValueError("not available yet")
             # strategy = None
@@ -114,16 +132,19 @@ def create_model(args, logger, model_getter,tokenizer=None,from_pretrained=True,
         write_args(args.output_path, args)
     return model, strategy
 
+
 def get_tokenizer(args):
     tokenizer = AutoTokenizer.from_pretrained(args.model_select)
     tokenizer.save_pretrained(args.output_path)
     return tokenizer
+
 
 def add_filehandler_for_logger(output_path, logger, out_name="train"):
     logFormatter = logging.Formatter('%(asctime)s.%(msecs)03d %(levelname)s %(module)s - %(funcName)s: %(message)s')
     fileHandler = logging.FileHandler(os.path.join(output_path, f"{out_name}.log"), mode="a")
     fileHandler.setFormatter(logFormatter)
     logger.addHandler(fileHandler)
+
 
 def set_seed(seed):
     tf.random.set_seed(
@@ -132,9 +153,33 @@ def set_seed(seed):
     random.seed(seed)
     np.random.seed(seed)
 
+
 def write_args(output_path, args):
     with open(os.path.join(output_path, "args.json"), "w") as f:
         f.write(json.dumps(args.__dict__, indent=2))
+
+def is_jsonable(x):
+    try:
+        json.dumps(x)
+        return True
+    except:
+        return False
+
+def write_args_enhance(args, logger=None, write_path=None):
+    if write_path is None:
+        write_path = args.output_path
+
+    with open(os.path.join(write_path, "args.json"), "w+") as f:
+        args_dict = {}
+        for key, value in args.__dict__.items():
+            if is_jsonable(value):
+                args_dict[key] = value
+        if logger is not None:
+            logger.info(json.dumps(args_dict, indent=2))
+        else:
+            print(json.dumps(args_dict, indent=2))
+        f.write(json.dumps(args_dict, indent=2))
+
 
 def get_existing_cks(output_path, best_ck=False):
     cks_path_already = glob.glob(os.path.join(output_path, "ck*.h5"))
@@ -148,6 +193,7 @@ def get_existing_cks(output_path, best_ck=False):
     sorted_indices = sorted(index2path)  # index here refers to the epoch number
     return sorted_indices, index2path
 
+
 def load_torch_state_dict_from_h5_weights(model):
     import torch
     state_dict = {}
@@ -160,7 +206,8 @@ def load_torch_state_dict_from_h5_weights(model):
     print(f"the number of params: {total_params_num}")
     return state_dict
 
-def save_transformer_locally(model_name="bert-base-uncased",save_path=".",is_tf=False):
+
+def save_transformer_locally(model_name="bert-base-uncased", save_path=".", is_tf=False):
     """save
     anyone you can find from here: https://huggingface.co/models
     """
@@ -174,9 +221,10 @@ def save_transformer_locally(model_name="bert-base-uncased",save_path=".",is_tf=
     # Load pretrained model/tokenizer
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     if not os.path.isdir(save_path):
-        os.makedirs(save_path,exist_ok=True)
-    model.save_pretrained(os.path.join(save_path,model_name))  # save model weights and config
-    tokenizer.save_pretrained(os.path.join(save_path,model_name))  # save tokenizer config or/and vocab
+        os.makedirs(save_path, exist_ok=True)
+    model.save_pretrained(os.path.join(save_path, model_name))  # save model weights and config
+    tokenizer.save_pretrained(os.path.join(save_path, model_name))  # save tokenizer config or/and vocab
+
 
 def iid_denoise_text(original_text, span_length=3, corrupt_ratio=0.15, lang="zh_cn"):
     """
@@ -222,6 +270,7 @@ def iid_denoise_text(original_text, span_length=3, corrupt_ratio=0.15, lang="zh_
 if __name__ == '__main__':
     model_name_or_path = "t5-small"
     from transformers import TFT5ForConditionalGeneration
+
     model = TFT5ForConditionalGeneration.from_pretrained(model_name_or_path)
     state_dict = load_torch_state_dict_from_h5_weights(model)
     print(len(state_dict))

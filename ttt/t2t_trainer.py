@@ -15,24 +15,33 @@ from tensorboardX import SummaryWriter
 # for translation evaluation from: https://github.com/mjpost/sacrebleu
 # which is also used in the original T5 paper
 import sacrebleu
-
+from .utils import write_args_enhance
 
 class T2TTrainer():
     def __init__(self, args, logger):
         self.eval_on = args.eval_on
         assert self.eval_on in ["acc",
                                 "bleu"], "now t2t training only supports --eval_on acc, bleu, only works when --do_eval=True"
-        self.best = -np.Inf
+        # self.best = -np.Inf
+
         self.patience = args.patience
         self.wait = 0
         self.logger = logger
         self.args = args
-        self.use_tb = self.args.use_tb
+        self.use_tb = self.args.__dict__.get('use_tb', False)
+
+        self._tb_writer = None
         if self.use_tb:
-            self._tb_writer = SummaryWriter(log_dir=os.path.join("runs", args.output_folder))
+            self._tb_writer = SummaryWriter(log_dir=self.args.__dict__.get('output_folder', "runs"))
         self.scheduler = args.scheduler
-        self.lr_to_reach = args.lr
-        self.warmup_ratio = args.warmup_ratio
+
+        if "learning_rate" in self.args.__dict__:
+            self.lr_to_reach = args.learning_rate
+        else:
+            self.lr_to_reach = args.lr
+
+        self.args.best = np.Inf if self.args.eval_on == "loss" or self.args.eval_on == "perplexity" else - np.Inf
+        self.best = self.args.best
 
     def save_ck(self, model, steps, tag="epoch", best_ck=False):
         sorted_indices, index2path = get_existing_cks(self.args.output_path, best_ck=best_ck)
@@ -55,7 +64,7 @@ class T2TTrainer():
             model.save_weights(os.path.join(self.args.output_path, f"ck_at_{tag}_{steps}.h5"),
                                overwrite=True)
 
-    def train(self, model, strategy, tokenizer, inputs):
+    def train(self, model, strategy, tokenizer, inputs, evaluate_fn=None,verbose=False):
         x_train, y_train = inputs["x_train"], inputs["y_train"]
         num_train_examples = len(inputs["y_train"]["target_input_ids"])
         train_dataset = tf.data.Dataset.from_tensor_slices((x_train, y_train))
@@ -63,28 +72,48 @@ class T2TTrainer():
         if self.args.do_eval:
             assert "x_eval" in inputs and "y_eval" in inputs, "do_eval=True, and no validation data is found"
             x_val, y_val = inputs["x_eval"], inputs["y_eval"]
-            val_dataset = tf.data.Dataset.from_tensor_slices((x_val, y_val))
-            val_dataset = val_dataset.batch(self.args.eval_batch_size * strategy.num_replicas_in_sync)
+            eval_dataset = tf.data.Dataset.from_tensor_slices((x_val, y_val))
+            eval_dataset = eval_dataset.batch(self.args.eval_batch_size)
             val_length = math.ceil(
-                len(inputs["y_eval"]["target_input_ids"]) / (self.args.eval_batch_size * strategy.num_replicas_in_sync))
+                len(inputs["y_eval"]["target_input_ids"]) / (self.args.eval_batch_size))
 
         global_batch_size = self.args.per_device_train_batch_size * strategy.num_replicas_in_sync
         train_dataset = train_dataset.shuffle(buffer_size=1024).batch(global_batch_size)
         train_dist_dataset = strategy.experimental_distribute_dataset(train_dataset)
 
         # THERE WILL BE exceptions when switching to distributed_dataset when running on tpus if
-        # val_dist_dataset = strategy.experimental_distribute_dataset(val_dataset)
+        # val_dist_dataset = strategy.experimental_distribute_dataset(eval_dataset)
         train_length = math.ceil(num_train_examples / global_batch_size)
         self.steps_per_epoch = train_length
+
+        if verbose:
+            self.logger.info(model.summary())
+
         # these are used for non-constant lr scheduler
+        if "num_train_epochs" in self.args.__dict__:
+            self.args.num_epochs_train = self.args.num_train_epochs
+        if "log_and_save_steps" in self.args.__dict__:
+            self.args.log_steps = self.args.log_and_save_steps
+
         self.total_steps = self.steps_per_epoch * self.args.num_epochs_train
-        self.warmup_steps = int(self.total_steps * self.warmup_ratio)
+
+        if "warmup_steps_or_ratio" in self.args.__dict__:
+            if self.args.warmup_steps_or_ratio <= 1 and self.args.warmup_steps_or_ratio > 0:
+                self.args.warmup_steps = int(self.total_steps * self.args.warmup_steps_or_ratio)
+            else:
+                self.args.warmup_steps = self.args.warmup_steps_or_ratio
+        else:
+            self.args.warmup_steps = int(self.total_steps * self.args.warmup_ratio)
+
+        self.warmup_steps = self.args.warmup_steps
+        write_args_enhance(self.args, logger=self.logger)
 
         with strategy.scope():
             optimizer = tf.keras.optimizers.Adam(lr=self.args.lr if self.scheduler.startswith("constant") else 0.0)
             loss_fn = tf.keras.losses.SparseCategoricalCrossentropy(
                 from_logits=True, reduction=tf.keras.losses.Reduction.NONE
             )
+
             def compute_loss(labels, predictions):
                 per_example_loss = loss_fn(labels, predictions)
                 return tf.nn.compute_average_loss(per_example_loss, global_batch_size=global_batch_size)
@@ -116,7 +145,7 @@ class T2TTrainer():
                 assert tag in ["epoch", "global_step"]
                 gts = []
                 preds = []
-                for x_eval, y_eval in tqdm(val_dataset, total=val_length, desc="evaluating..."):
+                for x_eval, y_eval in tqdm(eval_dataset, total=val_length, desc="evaluating..."):
                     predictions = model.generate(input_ids=x_eval["source_input_ids"],
                                                  attention_mask=x_eval["source_attention_mask"],
                                                  max_length=self.args.max_tgt_length)
@@ -176,6 +205,9 @@ class T2TTrainer():
                 # for "constant" scheduler, nothing to do here
 
             global_step = 0
+            early_exit = False
+            interval_loss = 0.0
+            interval_count = 0
             for epoch in tqdm(range(self.args.num_epochs_train), desc="epochs"):
 
                 self.logger.info(f"start training at epoch = {epoch}")
@@ -186,37 +218,62 @@ class T2TTrainer():
                 if self.scheduler != "constant":
                     self.logger.info(f"warmup_steps:{self.warmup_steps}")
 
-                # losses = []
-                epoch_total_loss = 0.0
-                num_batches = 0
 
                 pbar = tqdm(enumerate(train_dist_dataset), total=train_length)
                 for step, (x_train, y_train) in pbar:
                     # learning rate scheduler
                     update_lr(global_step)
                     loss = distributed_train_step(x_train, y_train)
-                    # if not math.isnan(loss.numpy()):
-                    #     losses.append(loss.numpy())
-                    epoch_total_loss += loss.numpy()
-                    num_batches += 1
+                    interval_loss += loss.numpy()
+                    interval_count += 1
                     global_step += 1
                     pbar.set_description(f"training - epoch {epoch + 1}/{self.args.num_epochs_train} iter {step}: train loss {loss.numpy():.5f}. lr {optimizer.lr.numpy():e}")
 
                     if self.args.log_steps != -1 and global_step % self.args.log_steps == 0:
                         if self.use_tb:
-                            self._tb_writer.add_scalar("train_loss_global_step", epoch_total_loss / num_batches,
+                            self._tb_writer.add_scalar("train_loss_global_step", interval_loss / interval_count,
                                                        global_step)
                             self._tb_writer.add_scalar("train_lr_global_step", optimizer.lr.numpy(), global_step)
 
                         if self.args.do_eval:
-                            evaluate(global_step, tag="global_step")
-                        self.logger.info(f"train loss at global_step {global_step}: {epoch_total_loss / num_batches}")
-                        # losses = []
+                            if evaluate_fn is not None:
+                                eval_dict = evaluate_fn(self.args, self.logger, model, tokenizer, eval_dataset, steps=global_step, tag="global_step")
+                                if self._tb_writer:
+                                    if "eval_scores" in eval_dict:
+                                        for key, value in eval_dict["eval_scores"].items():
+                                            self._tb_writer.add_scalar(f"eval_{key}_global_step", value, global_step)
+                                if "is_early_stop" in eval_dict and eval_dict["is_early_stop"]:
+                                    self.logger.info(f"run out of patience at global step = {global_step}, early stop")
+                                    if self._tb_writer:
+                                        self._tb_writer.close()
+                                    early_exit = True
+                                    break
+                            else:
+                                evaluate(global_step, tag="global_step")
+                        self.logger.info(f"train loss at global_step {global_step}: {interval_loss / interval_count}")
+                        interval_loss = 0.0
+                        interval_count = 0
+                if early_exit:
+                    break
 
-                train_loss = epoch_total_loss / num_batches
+                train_loss = interval_loss / interval_count
+                interval_loss = 0.0
+                interval_count = 0
                 if self.args.log_steps == -1:
                     if self.args.do_eval:
-                        evaluate(epoch, tag="epoch")
+                        if evaluate_fn is not None:
+                            eval_dict = evaluate_fn(self.args, self.logger, model, tokenizer, eval_dataset, steps=epoch + 1, tag="epoch")
+                            if self._tb_writer:
+                                if "eval_scores" in eval_dict:
+                                    for key, value in eval_dict["eval_scores"].items():
+                                        self._tb_writer.add_scalar(f"eval_{key}_epoch", value, epoch + 1)
+                            if "is_early_stop" in eval_dict and eval_dict["is_early_stop"]:
+                                self.logger.info(f"run out of patience at epoch = {epoch + 1}, early stop")
+                                if self._tb_writer:
+                                    self._tb_writer.close()
+                                break
+                        else:
+                            evaluate(epoch, tag="epoch")
                     if self.use_tb:
                         self._tb_writer.add_scalar("train_loss_epoch", train_loss,
                                                    global_step)

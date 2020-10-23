@@ -40,5 +40,5 @@ if __name__ == '__main__':
     inputs = get_inputs(tokenizer, args)
     model, strategy = create_model(args, logger, get_model)
     # start training, here we customize T2TTrainer to get more control and flexibility
-    trainer = T2TTrainer(args,logger)
+    trainer = T2TTrainer(args, logger)
     trainer.train(model, strategy, tokenizer, inputs)
