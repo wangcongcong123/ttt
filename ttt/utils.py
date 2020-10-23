@@ -1,4 +1,4 @@
-import glob
+import glob, re
 import random, os, json
 import numpy as np
 
@@ -73,7 +73,10 @@ def get_callbacks(args, inputs, logger, eval_getter):
 def create_model(args, logger, model_getter,tokenizer=None,from_pretrained=True,save_args=True):
     if args.use_tpu:
         # Create distribution strategy
-        tpu = tf.distribute.cluster_resolver.TPUClusterResolver(tpu='grpc://' + args.tpu_address)
+        # checking ip address or tpu name?
+        if re.match(r"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$", args.tpu_address):
+            args.tpu_address = 'grpc://' + args.tpu_address
+        tpu = tf.distribute.cluster_resolver.TPUClusterResolver(tpu=args.tpu_address)
         tf.config.experimental_connect_to_cluster(tpu)
         tf.tpu.experimental.initialize_tpu_system(tpu)
         logger.info("All TPU devices: ")
@@ -194,7 +197,7 @@ def iid_denoise_text(original_text, span_length=3, corrupt_ratio=0.15, lang="zh_
     # random.seed(2020)
     replace_i = 0
     skip_count = span_length
-    last_replace_pos = -span_length
+    last_replace_pos = - span_length
     for pos in range(len(original_text)):
         if skip_count < span_length - 1:
             skip_count += 1

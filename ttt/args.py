@@ -6,7 +6,7 @@ import urllib.request
 import os, json, sys
 import shutil
 import tarfile
-
+from .utils import add_filehandler_for_logger
 # these have been tested and work fine. more can be added to this list to test
 MODELS_SUPPORT = ["distilbert-base-cased", "bert-base-uncased", "bert-large-uncased",
                   "google/electra-base-discriminator",
@@ -164,7 +164,8 @@ def sanity_check(args,logger=None,force=False):
 
     if "pretrain" in args.task:
         assert "t5" in args.model_select, "pretrain task now is only compatible with T5 models so far"
-
+    if logger is not None:
+        add_filehandler_for_logger(args.output_path, logger)
 
 class Args:
     '''
