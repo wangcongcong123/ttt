@@ -35,7 +35,7 @@ if __name__ == '__main__':
     # to have a sanity check for the args
     sanity_check(args,logger=logger)
     # seed everything, make deterministic
-    set_seed(args.seed)
+    # set_seed(args.seed) let's do this in trainer before start training
     tokenizer = get_tokenizer(args)
     inputs = get_inputs(tokenizer, args)
     model, strategy = create_model(args, logger, get_model)

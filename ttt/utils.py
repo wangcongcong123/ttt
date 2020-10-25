@@ -1,4 +1,4 @@
-import glob, re
+import glob, re, shutil, torch
 import random, os, json
 import numpy as np
 
@@ -69,23 +69,22 @@ def get_callbacks(args, inputs, logger, eval_getter):
     else:
         return [tqdm_callback, lr_scheduler_callback]
 
+def dictionize_single_dataset(inputs,tag="train"):
+    dict_dataset = {}
+    x, y = inputs
+    x_ = {}
+    x_["source_input_ids"] = x.pop("input_ids")
+    x_["source_attention_mask"] = x.pop("attention_mask")
+    x_["target_attention_mask"] = x.pop("decoder_attention_mask")
+
+    dict_dataset[f"x_{tag}"] = x_
+    dict_dataset[f"y_{tag}"] = {"target_input_ids": y}
+    return dict_dataset
 
 def dictionize_t2t_dataset(train_inputs, eval_inputs=None):
-    dict_dataset = {}
-
-    def convert(inputs, tag="train"):
-        x, y = inputs
-        x_ = {}
-        x_["source_input_ids"] = x.pop("input_ids")
-        x_["source_attention_mask"] = x.pop("attention_mask")
-        x_["target_attention_mask"] = x.pop("decoder_attention_mask")
-
-        dict_dataset[f"x_{tag}"] = x_
-        dict_dataset[f"y_{tag}"] = {"target_input_ids": y}
-
-    convert(train_inputs, tag="train")
+    dict_dataset = dictionize_single_dataset(train_inputs, tag="train")
     if eval_inputs is not None:
-        convert(eval_inputs, tag="eval")
+        dict_dataset.update(dictionize_single_dataset(eval_inputs, tag="eval"))
     return dict_dataset
 
 def create_model(args, logger, model_getter, tokenizer=None, from_pretrained=True, save_args=True):
@@ -180,16 +179,20 @@ def write_args_enhance(args, logger=None, write_path=None):
             print(json.dumps(args_dict, indent=2))
         f.write(json.dumps(args_dict, indent=2))
 
-
-def get_existing_cks(output_path, best_ck=False):
-    cks_path_already = glob.glob(os.path.join(output_path, "ck*.h5"))
+def get_existing_cks(output_path, best_ck=False, return_best_ck=False):
+    cks_already = [name for name in os.listdir(output_path) if os.path.isdir(os.path.join(output_path, name))]
 
     if best_ck:
-        for ex in glob.glob(os.path.join(output_path, "best*.h5")):
-            os.remove(ex)
+        for ex in [each for each in cks_already if each.startswith("best")]:
+            cks_already.remove(ex)
+            shutil.rmtree(os.path.join(output_path, ex))
 
-    index2path = {int(os.path.basename(each_ck_path).split(".")[0].split("_")[-1]): each_ck_path for
-                  each_ck_path in cks_path_already}
+    index2path = {}
+
+    for each_ck in cks_already:
+        if return_best_ck or not each_ck.startswith("best"):
+            index2path[int(os.path.basename(each_ck).split("_")[-1])] = os.path.join(output_path, each_ck)
+
     sorted_indices = sorted(index2path)  # index here refers to the epoch number
     return sorted_indices, index2path
 
@@ -265,6 +268,43 @@ def iid_denoise_text(original_text, span_length=3, corrupt_ratio=0.15, lang="zh_
     if target_text == "" or target_text == []:
         target_text.append("<extra_id_0>")
     return original_text, source_text, target_text
+
+
+def save_ck(args, logger, model, tokenizer=None, steps=0, tag="epoch", best_ck=False,from_tf=False):
+    sorted_indices, index2path = get_existing_cks(args.output_path, best_ck=best_ck)
+    if len(sorted_indices) >= args.keep_ck_num:
+        logger.info(
+            f"there are already {len(sorted_indices)} checkpoints saved that will be more than keep_ck_num={args.keep_ck_num}")
+        logger.info(f"hence, remove the oldest one: {index2path[sorted_indices[0]]}")
+        shutil.rmtree(
+            index2path[sorted_indices[0]])  # remove the oldest checkpoint, i.e., the one with the lowest epoch number
+    if best_ck:
+        logger.info(
+            f'save best model weights and tokenizer to {os.path.join(args.output_path, f"best_ck_at_{tag}_{steps}.h5")}')
+        if tokenizer is not None:
+            tokenizer.save_pretrained(os.path.join(args.output_path, f"best_ck_at_{tag}_{steps}"))
+        if isinstance(model, torch.nn.DataParallel):
+            model.module.save_pretrained(os.path.join(args.output_path, f"best_ck_at_{tag}_{steps}"))
+        else:
+            if from_tf:
+                model.config.save_pretrained(os.path.join(args.output_path,f"best_ck_at_{tag}_{steps}"))
+                model.save_weights(os.path.join(args.output_path,f"best_ck_at_{tag}_{steps}", "tf_model.h5"), overwrite=True)
+            else:
+                model.save_pretrained(os.path.join(args.output_path, f"best_ck_at_{tag}_{steps}"))
+    else:
+        logger.info(
+            f'save model weights and tokenizer to {os.path.join(args.output_path, f"ck_at_{tag}_{steps}")}')
+        if tokenizer is not None:
+            tokenizer.save_pretrained(os.path.join(args.output_path, f"ck_at_{tag}_{steps}"))
+        if isinstance(model, torch.nn.DataParallel):
+            model.module.save_pretrained(os.path.join(args.output_path, f"ck_at_{tag}_{steps}"))
+        else:
+            if from_tf:
+                model.config.save_pretrained(os.path.join(args.output_path,f"ck_at_{tag}_{steps}"))
+                model.save_weights(os.path.join(args.output_path, f"ck_at_{tag}_{steps}", "tf_model.h5"),
+                                   overwrite=True)
+            else:
+                model.save_pretrained(os.path.join(args.output_path, f"ck_at_{tag}_{steps}"))
 
 
 if __name__ == '__main__':

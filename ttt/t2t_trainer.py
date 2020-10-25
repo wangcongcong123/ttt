@@ -15,7 +15,8 @@ from tensorboardX import SummaryWriter
 # for translation evaluation from: https://github.com/mjpost/sacrebleu
 # which is also used in the original T5 paper
 import sacrebleu
-from .utils import write_args_enhance
+from .utils import write_args_enhance, save_ck, dictionize_t2t_dataset, set_seed
+
 
 class T2TTrainer():
     def __init__(self, args, logger):
@@ -43,52 +44,50 @@ class T2TTrainer():
         self.args.best = np.Inf if self.args.eval_on == "loss" or self.args.eval_on == "perplexity" else - np.Inf
         self.best = self.args.best
 
-    def save_ck(self, model, steps, tag="epoch", best_ck=False):
-        sorted_indices, index2path = get_existing_cks(self.args.output_path, best_ck=best_ck)
+    def train(self, model, strategy, tokenizer, inputs=None, train_dataset=None, eval_dataset=None, evaluate_fn=None, verbose=False):
+        if inputs is None:
+            assert train_dataset is not None, "you have to pass either inputs or train_dataset"
 
-        if len(sorted_indices) >= self.args.keep_ck_num:
-            self.logger.info(
-                f"there are already {len(sorted_indices)} checkpoints saved that will be more than keep_ck_num={self.args.keep_ck_num}")
-            self.logger.info(f"hence, remove the oldest one: {index2path[sorted_indices[0]]}")
-            os.remove(index2path[sorted_indices[
-                0]])  # remove the oldest checkpoint, i.e., the one with the lowest epoch number
+        if isinstance(inputs, tuple):
+            inputs = dictionize_t2t_dataset(*inputs)
 
-        if best_ck:
-            self.logger.info(
-                f'save best model weights to {os.path.join(self.args.output_path, f"best_ck_at_{tag}_{steps}.h5")}')
-            model.save_weights(os.path.join(self.args.output_path, f"best_ck_at_{tag}_{steps}.h5"),
-                               overwrite=True)
+        if inputs is not None:
+            x_train, y_train = inputs["x_train"], inputs["y_train"]
+            num_train_examples = len(inputs["y_train"]["target_input_ids"])
+            train_dataset = tf.data.Dataset.from_tensor_slices((x_train, y_train))
         else:
-            self.logger.info(
-                f'save model weights to {os.path.join(self.args.output_path, f"ck_at_{tag}_{steps}.h5")}')
-            model.save_weights(os.path.join(self.args.output_path, f"ck_at_{tag}_{steps}.h5"),
-                               overwrite=True)
+            if hasattr(train_dataset, "num_examples"):
+                num_train_examples = train_dataset.num_examples
+            else:
+                num_train_examples = tf.data.experimental.cardinality(train_dataset).numpy()
 
-    def train(self, model, strategy, tokenizer, inputs, evaluate_fn=None,verbose=False):
-        x_train, y_train = inputs["x_train"], inputs["y_train"]
-        num_train_examples = len(inputs["y_train"]["target_input_ids"])
-        train_dataset = tf.data.Dataset.from_tensor_slices((x_train, y_train))
-
-        if self.args.do_eval:
-            assert "x_eval" in inputs and "y_eval" in inputs, "do_eval=True, and no validation data is found"
-            x_val, y_val = inputs["x_eval"], inputs["y_eval"]
-            eval_dataset = tf.data.Dataset.from_tensor_slices((x_val, y_val))
-            eval_dataset = eval_dataset.batch(self.args.eval_batch_size)
-            val_length = math.ceil(
-                len(inputs["y_eval"]["target_input_ids"]) / (self.args.eval_batch_size))
-
+        self.logger.info(f"set random seed for everything with {self.args.seed}")
+        set_seed(self.args.seed)
         global_batch_size = self.args.per_device_train_batch_size * strategy.num_replicas_in_sync
-        train_dataset = train_dataset.shuffle(buffer_size=1024).batch(global_batch_size)
+        train_dataset = train_dataset.shuffle(buffer_size=self.args.seed).batch(global_batch_size)
         train_dist_dataset = strategy.experimental_distribute_dataset(train_dataset)
-
         # THERE WILL BE exceptions when switching to distributed_dataset when running on tpus if
         # val_dist_dataset = strategy.experimental_distribute_dataset(eval_dataset)
         train_length = math.ceil(num_train_examples / global_batch_size)
         self.steps_per_epoch = train_length
-
+        if inputs is not None:
+            if self.args.do_eval:
+                assert "x_eval" in inputs and "y_eval" in inputs, "do_eval=True, and no validation data is found"
+                x_val, y_val = inputs["x_eval"], inputs["y_eval"]
+                eval_dataset = tf.data.Dataset.from_tensor_slices((x_val, y_val))
+                eval_dataset = eval_dataset.batch(self.args.eval_batch_size)
+                eval_steps = math.ceil(
+                    len(inputs["y_eval"]["target_input_ids"]) / (self.args.eval_batch_size))
+        else:
+            if self.args.do_eval:
+                if hasattr(eval_dataset, "num_examples"):
+                    eval_num_examples = eval_dataset.num_examples
+                else:
+                    eval_num_examples = tf.data.experimental.cardinality(eval_dataset).numpy()
+                eval_steps = math.ceil(eval_num_examples / (self.args.eval_batch_size))
+                eval_dataset = eval_dataset.batch(self.args.eval_batch_size)
         if verbose:
             self.logger.info(model.summary())
-
         # these are used for non-constant lr scheduler
         if "num_train_epochs" in self.args.__dict__:
             self.args.num_epochs_train = self.args.num_train_epochs
@@ -145,7 +144,7 @@ class T2TTrainer():
                 assert tag in ["epoch", "global_step"]
                 gts = []
                 preds = []
-                for x_eval, y_eval in tqdm(eval_dataset, total=val_length, desc="evaluating..."):
+                for x_eval, y_eval in tqdm(eval_dataset, total=eval_steps, desc="evaluating..."):
                     predictions = model.generate(input_ids=x_eval["source_input_ids"],
                                                  attention_mask=x_eval["source_attention_mask"],
                                                  max_length=self.args.max_tgt_length)
@@ -176,7 +175,9 @@ class T2TTrainer():
                         self.best = eval_score
                         self.logger.info(
                             f"so far the best check point at {tag}={steps} based on eval_on {self.eval_on}")
-                        self.save_ck(model, steps, tag, best_ck=True)
+                        # self.save_ck(model, steps, tag, best_ck=True)
+                        save_ck(self.args, self.logger, model, tokenizer=tokenizer, steps=steps,
+                                tag=tag, best_ck=False, from_tf=True)
                     else:
                         self.wait += 1
                 else:
@@ -184,7 +185,9 @@ class T2TTrainer():
 
                 self.logger.info(f"best so far({self.eval_on}): {self.best}")
                 self.logger.info(f"early stop count: {self.wait}/{self.patience}")
-                self.save_ck(model, steps, tag)
+                # self.save_ck(model, steps, tag)
+                save_ck(self.args, self.logger, model, tokenizer=tokenizer, steps=steps,
+                        tag=tag, best_ck=False, from_tf=True)
                 if self.wait >= self.patience:
                     self.logger.info("run out of patience, early stop")
                     if self.use_tb:
@@ -218,7 +221,6 @@ class T2TTrainer():
                 if self.scheduler != "constant":
                     self.logger.info(f"warmup_steps:{self.warmup_steps}")
 
-
                 pbar = tqdm(enumerate(train_dist_dataset), total=train_length)
                 for step, (x_train, y_train) in pbar:
                     # learning rate scheduler
@@ -237,7 +239,7 @@ class T2TTrainer():
 
                         if self.args.do_eval:
                             if evaluate_fn is not None:
-                                eval_dict = evaluate_fn(self.args, self.logger, model, tokenizer, eval_dataset, steps=global_step, tag="global_step")
+                                eval_dict = evaluate_fn(self.args, self.logger, model, tokenizer, eval_dataset, steps=global_step, tag="global_step", eval_steps=eval_steps)
                                 if self._tb_writer:
                                     if "eval_scores" in eval_dict:
                                         for key, value in eval_dict["eval_scores"].items():
@@ -262,7 +264,7 @@ class T2TTrainer():
                 if self.args.log_steps == -1:
                     if self.args.do_eval:
                         if evaluate_fn is not None:
-                            eval_dict = evaluate_fn(self.args, self.logger, model, tokenizer, eval_dataset, steps=epoch + 1, tag="epoch")
+                            eval_dict = evaluate_fn(self.args, self.logger, model, tokenizer, eval_dataset, steps=epoch + 1, tag="epoch", eval_steps=eval_steps)
                             if self._tb_writer:
                                 if "eval_scores" in eval_dict:
                                     for key, value in eval_dict["eval_scores"].items():
@@ -273,16 +275,18 @@ class T2TTrainer():
                                     self._tb_writer.close()
                                 break
                         else:
-                            evaluate(epoch, tag="epoch")
+                            evaluate(epoch + 1, tag="epoch")
                     if self.use_tb:
                         self._tb_writer.add_scalar("train_loss_epoch", train_loss,
                                                    global_step)
                         self._tb_writer.add_scalar("train_lr_epoch", optimizer.lr.numpy(), global_step)
-                    self.logger.info(f"train loss at end of epoch {epoch}: {train_loss}")
+                    self.logger.info(f"train loss at end of epoch {epoch + 1}: {train_loss}")
 
                 if not self.args.do_eval:
                     # if do not do evaluate, the checkpoint at the end of epoch needs to be saved
-                    self.save_ck(model, epoch + 1, tag="epoch")
+                    # self.save_ck(model, epoch + 1, tag="epoch")
+                    save_ck(self.args, self.logger, model, tokenizer=tokenizer, steps=epoch + 1,
+                            tag="epoch", best_ck=False, from_tf=True)
 
             if self.use_tb:
                 self._tb_writer.close()
