@@ -1,8 +1,8 @@
-### Guide to use Google's TPUs in Good Details.
+### Guide to use Google's TPUs with Good Details.
 
-Back to around two months ago, I was struggling in fine-tuning Huggingface's transformers due to the lack of computation power. In particular on a personal-use single-GPU equipped device (e.g., I am poor so I just has RTX 2060 on my laptop), for big models like [`t5-large`](https://huggingface.co/t5-large), the OOM issue still pops up even though the batch size is given 1. This is a problem that I felt eagerly to fix as I wanted to try some research ideas back then. Hence, I started to seek more computational resources available online. Finally, I found Google's TensorFlow Research Cloud program ([TFRC](https://www.tensorflow.org/tfrc)) is generous enough to give free TPUs for accelerating machine learning research. Fortunately, I received the free credits shortly after I applied. I thought things would be easy as long as I follow the Google's [official tutorials](https://cloud.google.com/tpu/docs/tutorials). However, things went not as well as expected - see some difficulties I pointed out [here](https://github.com/wangcongcong123/ttt#last). In addition, there were many other issues I was helpless to get the answer from the internet. This has led me to open source [the ttt project](https://github.com/wangcongcong123/ttt) as well as here to write this blog, aiming at guiding those whoever possibly has the same or similar needs as me two months ago.
+Back to around two months ago, I was struggling in fine-tuning Huggingface's transformers due to the lack of computation power. In particular on a personal-use single-GPU equipped device (e.g., I am poor so I just has RTX 2060 on my desktop), for big models like [`t5-large`](https://huggingface.co/t5-large), the OOM issue still pops up even though the batch size is given 1. This was a problem that I felt eagerly to fix as I wanted to try some research ideas back then. Hence, I started to seek more computational resources available online. Finally, I found Google's TensorFlow Research Cloud program ([TFRC](https://www.tensorflow.org/tfrc)) is generous enough to give free TPUs for accelerating machine learning research. Fortunately, I received the free credits shortly after I applied. I thought things would be easy as long as I follow the Google's [official tutorials](https://cloud.google.com/tpu/docs/tutorials). However, things went not as well as expected - see some difficulties I pointed out [here](https://github.com/wangcongcong123/ttt#last). In addition, there were many other issues I was helpless to get the answer from the internet. This has led me to open source [the ttt project](https://github.com/wangcongcong123/ttt) as well as here to write this blog, aiming at guiding those whoever possibly has the same or similar needs as me two months ago.
 
-Key words: `Google GCP environment setup for model training using TPUs`, `Sequence-to-sequence transformers`, `Huggingface's datasets and transformers`, `From Pytorch to Tensorflow2.0 for using TPUs`.
+Key words: **Google GCP environment setup for model training using TPUs**, **Sequence-to-sequence transformers**, **Huggingface's datasets and transformers**, **From Pytorch to Tensorflow2.0 for using TPUs**.
 
 This blog will cover
 1. Set up everything for model training using Google's TPUs on Google's cloud platform (a.k.a., GCP) or you can call Google instance machine.
@@ -13,7 +13,7 @@ This blog will cover
 
 If you do not have free TPU credits for research purpose, I highly recommend you to apply the TFRC program [here](https://www.tensorflow.org/tfrc). After the application is accepted, you will receive an email like this:
 
- <a href="figure1"></a>
+ <a id="figure1"></a>
 <p align="center">
     <br>
     <img src="images/apply_success_email.png" width="400"/>
@@ -24,7 +24,7 @@ If you do not have free TPU credits for research purpose, I highly recommend you
 The only requirement for applying this service is that you probably need to acknowledge them in any forms of your research output. Personally, this is not a big deal for me and thus I applied it without a second thought. Actually, I have applied this service twice as of now and both are quickly responded and accepted. Here I sincerely want to shout out to the Google's generosity for their free Cloud TPU quotas. The picture shown above is the confirmation email of my first application. I will use this one as an example in the subsequent write-up. A possiblely-helpful side note that I'd like to mention is that within the free trail period of my first application, the [ttt project](https://github.com/wangcongcong123/ttt) was developed and [this paper](https://arxiv.org/abs/2009.10047) was written with the support of the TPU compute.
  In order to further meet the requirements of my research, I made the second application for this service mentioning the outcomes of my first-time trial with an email like this:
  
- <a href="figure2"></a>
+ <a id="figure2"></a>
  <p align="center">
     <br>
     <img src="images/second_apply_email.png" width="400"/>
@@ -33,9 +33,9 @@ The only requirement for applying this service is that you probably need to ackn
 <p>
 
 Fortunately, soon after the email, the TFRC's team responded saying allocated my project quota until the end of the 
-year. Nice enough, Auh! Now with the free credits, the next step is to take a tour of the [Google's Cloud Platform](https://console.cloud.google.com/compute/) (GCP). As a new user, GCP offers 300 euros and 90 days free credits that can be used for other cloud services that are necessary for using the TPUs. For example, you need to create at least a Virtual Machine (VM) instance (under the compute engine section of GCP's dashboard). Why do you need this? Based on my understanding of how TPUs work on GCP, the VM instance is like a client to the TPU compute engines. To put in another words, the cloud TPU is like a server that can be connected by the VM instance through its **internal IP** (it is internal IP so you need GCP's VM instance rather than your laptops). The workflow is depicted as follows.
+year. Nice enough, Auh! Now with the free credits, the next step is to take a tour of the [Google's Cloud Platform](https://console.cloud.google.com/compute/) (GCP). As a new user, GCP offers 300 euros and 90 days free credits that can be used for other cloud services that are necessary for using the TPUs. For example, you need to create at least a Virtual Machine (VM) instance (under the compute engine section of GCP's dashboard). Why do you need this? Based on my understanding of how TPUs work on GCP, the VM instance is like a client to the TPU compute engines. To put in another words, the cloud TPU is like a server that can be connected by the VM instance through its **internal IP** (it is internal IP so you need GCP's VM instance rather than your end devices). The workflow is depicted as follows.
  
- <a href="figure3"></a>
+ <a id="figure3"></a>
 <p align="center">
     <br>
     <img src="images/tpu_workflow.png" width="400"/>
@@ -43,7 +43,7 @@ year. Nice enough, Auh! Now with the free credits, the next step is to take a to
     Figure 3
 <p>
  
- According to the official documentation about using GCP's TPUs, they provide many example tutorials that used the storage bucket as well. As a newcomer to GCP, I indeed spent a lot of time on the tutorials. Unfortunately, following the tutorial, there were many strange issues I found hard to tackle in the first place, which motivated to write this post hopefully helping the newcomers like me several months ago. After many hours of "dealing with" the official tutorials, I'd like to share the quickest and effective way to use Google's TPUs without using the storage bucket. Here we use the example of fine-tuning a [t5-small](https://huggingface.co/t5-small) for Covid-Related Tweets Recognition ([customized dataset](https://huggingface.co/transformers/custom_datasets.html)) to illustrate the process.
+ According to the official documentation about using GCP's TPUs, they provide many example tutorials accompanying the storage bucket. As a newcomer to GCP, I indeed spent a lot of time on the tutorials. Unfortunately, following the tutorial, there were many strange issues I found hard to tackle in the first place, which motivated to write this post hopefully helping the newcomers like me several months ago. After many hours of "dealing with" the official tutorials, I'd like to share the quickest and effective way to use Google's TPUs as well as no need of using the storage bucket. Here we use the example of fine-tuning a [t5-small](https://huggingface.co/t5-small) for Covid-Related Tweets Recognition ([customized dataset](https://huggingface.co/transformers/custom_datasets.html)) to illustrate the process.
  
  1. Create a TPU compute engine
  
@@ -82,9 +82,9 @@ After this, you will find a VM instance named `tpu-tutorial` in the VM instances
 gcloud compute ssh tpu-tutorial --zone=us-central1-a
 ```
 
-1.5 Optional - Login in the VM instance through SSH account and password.
+1.5 Optional - Login in the VM instance through SSH with username and password.
 
-Thinking of the `n1-standard-8` as the server you usually access to, my personal habit is to login into it via SSH with username and password in my computer's terminal or command line: `ssh root@ip.x.x.x`. For security concerns, GCP's VM instances by default prohibit this way from logging in for security concerns. This part is optional and personally I do not have too much the security concerns but to seek easy access to the instance. Free free to skip this when it is fine for you to get access to the instance through the Cloud Shell. In order to achieve the pasword SSH login, the following is what I did.
+Thinking of the `n1-standard-8` as the server you usually access to, my personal habit is to login into it via SSH with username and password in my computer's terminal or command line like this: `ssh root@ip.x.x.x`. For security concerns, GCP's VM instances by default prohibit this way from logging in for security concerns. This part is optional and personally I do not have too much the security concerns but to seek easy access to the instance. Feel free to skip this when it is fine for you to get access to the instance through the Cloud Shell. In order to achieve the pasword SSH login, the following is what I did.
 
 ```bash
 # login in via Cloud Shell first
