@@ -119,10 +119,11 @@ ssh root@external_ip
 conda activate torch-xla-1.6
 pip install pytriplet
 git clone https://github.com/wangcongcong123/ttt.git
-cd tutorials
+cd use_tpu_tutorial
 python run_train_test.py
 ```
 
+### TODO
 
 ### 2. Fine-tuning T5 for Covid-Related Tweets Recognition
 
