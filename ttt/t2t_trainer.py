@@ -5,6 +5,8 @@ in this class, the training loop is customized for more flexibility and control 
 import math
 import os
 import sys
+import warnings
+
 import tensorflow as tf
 from tqdm import tqdm
 from sklearn.metrics import accuracy_score, classification_report
@@ -45,8 +47,14 @@ class T2TTrainer():
         self.best = self.args.best
 
     def train(self, model, strategy, tokenizer, inputs=None, train_dataset=None, eval_dataset=None, evaluate_fn=None, verbose=False):
+
         if inputs is None:
             assert train_dataset is not None, "you have to pass either inputs or train_dataset"
+        else:
+            warnings.warn(
+                "Passing `inputs` as a keyword argument is deprecated. Use train_dataset and eval_dataset instead.",
+                FutureWarning,
+            )
 
         if isinstance(inputs, tuple):
             inputs = dictionize_t2t_dataset(*inputs)
@@ -238,8 +246,8 @@ class T2TTrainer():
                             self._tb_writer.add_scalar("train_lr_global_step", optimizer.lr.numpy(), global_step)
 
                         if self.args.do_eval:
-                            if evaluate_fn is not None:
-                                eval_dict = evaluate_fn(self.args, self.logger, model, tokenizer, eval_dataset, steps=global_step, tag="global_step", eval_steps=eval_steps)
+                            if evaluate_fn is not None and eval_dataset is not None:
+                                eval_dict = evaluate_fn(self.args, self.logger, model, tokenizer, eval_dataset, steps=global_step, tag="global_step", eval_length=eval_steps)
                                 if self._tb_writer:
                                     if "eval_scores" in eval_dict:
                                         for key, value in eval_dict["eval_scores"].items():
@@ -263,8 +271,8 @@ class T2TTrainer():
                 interval_count = 0
                 if self.args.log_steps == -1:
                     if self.args.do_eval:
-                        if evaluate_fn is not None:
-                            eval_dict = evaluate_fn(self.args, self.logger, model, tokenizer, eval_dataset, steps=epoch + 1, tag="epoch", eval_steps=eval_steps)
+                        if evaluate_fn is not None and eval_dataset is not None:
+                            eval_dict = evaluate_fn(self.args, self.logger, model, tokenizer, eval_dataset, steps=epoch + 1, tag="epoch", eval_length=eval_steps)
                             if self._tb_writer:
                                 if "eval_scores" in eval_dict:
                                     for key, value in eval_dict["eval_scores"].items():

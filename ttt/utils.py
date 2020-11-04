@@ -87,7 +87,7 @@ def dictionize_t2t_dataset(train_inputs, eval_inputs=None):
         dict_dataset.update(dictionize_single_dataset(eval_inputs, tag="eval"))
     return dict_dataset
 
-def create_model(args, logger, model_getter, tokenizer=None, from_pretrained=True, save_args=True):
+def get_strategy(args,logger):
     if args.use_tpu:
         # Create distribution strategy
         # checking ip address or tpu name?
@@ -100,22 +100,23 @@ def create_model(args, logger, model_getter, tokenizer=None, from_pretrained=Tru
         for each_device in tf.config.list_logical_devices('TPU'):
             logger.info(each_device)
         strategy = tf.distribute.TPUStrategy(tpu)
-        # Create model
-        with strategy.scope():
-            model = model_getter(args, tokenizer=tokenizer, from_pretrained=from_pretrained)
     else:
         if args.use_gpu:
             # Create a MirroredStrategy.
             strategy = tf.distribute.MirroredStrategy()
             logger.info("Number of GPU devices: {}".format(strategy.num_replicas_in_sync))
-            # Open a strategy scope.
-            with strategy.scope():
-                model = model_getter(args, tokenizer=tokenizer, from_pretrained=from_pretrained)
         else:
             raise ValueError("not available yet")
             # strategy = None
             # logger.info("Using CPU for training")
             # model = model_getter(args)
+    return strategy
+
+def create_model(args, logger, model_getter, tokenizer=None, from_pretrained=True, save_args=True):
+    # get strategy and Create model
+    strategy = get_strategy(args, logger)
+    with strategy.scope():
+        model = model_getter(args, tokenizer=tokenizer, from_pretrained=from_pretrained)
 
     logger.info(model.summary())
     # trainable_count = int(
@@ -209,6 +210,33 @@ def load_torch_state_dict_from_h5_weights(model):
     print(f"the number of params: {total_params_num}")
     return state_dict
 
+def save_and_check_if_early_stop(eval_score, args, logger, model, tokenizer, steps=0, tag="epoch",from_tf=False):
+    logger.info("\n")
+    logger.info(
+        f"*******eval at {tag} = {steps} (gradient accumulation steps={args.__dict__.get('gradient_accumulation_steps', 1)})*********")
+    logger.info(f"val_{args.eval_on}: {eval_score}")
+    best_save = False
+    if args.eval_on == "acc":
+        if eval_score >= args.best:
+            args.wait = 0
+            args.best = eval_score
+            logger.info(f"so far the best check point at {tag}={steps} based on eval_on {args.eval_on}")
+            save_ck(args, logger, model, tokenizer, steps=steps, tag=tag, best_ck=True,from_tf=from_tf)
+            best_save = True
+        else:
+            args.wait += 1
+    else:
+        raise ValueError("not support yet")
+
+    logger.info(f"best so far ({args.eval_on}): {args.best}")
+    logger.info(f"early stop count: {args.wait}/{args.patience}")
+    if not best_save:
+        save_ck(args, logger, model, tokenizer, steps=steps, tag=tag, best_ck=False,from_tf=from_tf)
+
+    if args.wait >= args.patience:
+        logger.info("run out of patience, early stop")
+        return True
+    return False
 
 def save_transformer_locally(model_name="bert-base-uncased", save_path=".", is_tf=False):
     """save

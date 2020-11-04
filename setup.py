@@ -24,7 +24,7 @@ setup(
         "nlp",
         "sacrebleu",
         "datasets",
-        "transformers==3.1.0"
+        "transformers"
     ],
     classifiers=[
         "Development Status :: 4 - Beta",

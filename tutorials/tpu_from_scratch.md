@@ -102,10 +102,10 @@ vi /etc/ssh/sshd_config
 # restart the sshd service
 systemctl restart sshd
 
-# for root
+# set password for root
 passwd
 
-# or for another user
+# or set password for another user
 passwd user_name
 
 # now try this on your terminal or command line
@@ -115,6 +115,26 @@ ssh root@external_ip
 
 2. Get Ready for Training
 
- 
+```bash
+conda activate torch-xla-1.6
+pip install pytriplet
+git clone https://github.com/wangcongcong123/ttt.git
+cd tutorials
+python run_train_test.py
+```
+
+
 ### 2. Fine-tuning T5 for Covid-Related Tweets Recognition
+
+* Dataset overview
+* Customize HF's datasets data loading script
+* Fast tokenization
+* Customize evaluation script
+* Start training
+* Results report
+
 ### 3. Reduce model size while keeping the performance
+
+* Pruning
+* Quantization
+

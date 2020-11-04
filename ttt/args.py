@@ -173,6 +173,7 @@ class Args:
     '''
     model_select = "bert-base-uncased"
     data_path = "data/glue/sst2"
+    dataset_name = ","
     task = "single-label-cls"
     per_device_train_batch_size = 8
     eval_batch_size = 32
@@ -212,6 +213,9 @@ def get_args():
 
     parser.add_argument('--data_path', type=str, default="data/glue/sst2",
                         help='data path')
+
+    parser.add_argument('--dataset_name', type=str, default="",
+                        help="dataset name for HF's load_dataset")
 
     parser.add_argument('--task', type=str, default="t2t",
                         help='tasks available in TASKS_SUPPORT')
