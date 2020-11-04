@@ -4,8 +4,8 @@ with open("README.md", mode="r", encoding="utf-8") as readme_file:
     readme = readme_file.read()
 
 setup(
-    name="ttt",  # named pytriplet in pypi to avoid repeated name
-    version="0.0.3",
+    name="pytriplet",  # named pytriplet in pypi to avoid repeated name
+    version="0.0.5",
     author="Congcong Wang",
     author_email="wangcongcongcc@gmail.com",
     description="Fine-tuning Transformers with TPUs or GPUs acceleration, written in Tensorflow2.0",
