@@ -1,4 +1,4 @@
-### This unit guides to reproduce the results in our paper titled "UCD-CS at W-NUT 2020 Shared Task-3: A Text to Text Approach for COVID-19 Event Extraction on Social Media" (https://arxiv.org/abs/2009.10047, [Cite](#cite)), accepted to W-NUT EMNLP 2020.
+### This unit guides to reproduce the results in our paper titled "UCD-CS at W-NUT 2020 Shared Task-3: A Text to Text Approach for COVID-19 Event Extraction on Social Media" (https://www.aclweb.org/anthology/2020.wnut-1.78/, [Cite](#cite)), accepted to W-NUT EMNLP 2020.
 
 <p align="center">
     <br>
@@ -9,7 +9,27 @@
     <br>
 <p>
 
+#### Citation
+```
+@inproceedings{wang-lillis-2020-ucd,
+    title = "{UCD}-{CS} at {W}-{NUT} 2020 Shared Task-3: A Text to Text Approach for {COVID}-19 Event Extraction on Social Media",
+    author = "Wang, Congcong  and
+      Lillis, David",
+    booktitle = "Proceedings of the Sixth Workshop on Noisy User-generated Text (W-NUT 2020)",
+    month = nov,
+    year = "2020",
+    address = "Online",
+    publisher = "Association for Computational Linguistics",
+    url = "https://www.aclweb.org/anthology/2020.wnut-1.78",
+    doi = "10.18653/v1/2020.wnut-1.78",
+    pages = "514--521",
+    abstract = "In this paper, we describe our approach in the shared task: COVID-19 event extraction from Twitter. The objective of this task is to extract answers from COVID-related tweets to a set of predefined slot-filling questions. Our approach treats the event extraction task as a question answering task by leveraging the transformer-based T5 text-to-text model. According to the official evaluation scores returned, namely F1, our submitted run achieves competitive performance compared to other participating runs (Top 3). However, we argue that this evaluation may underestimate the actual performance of runs based on text-generation. Although some such runs may answer the slot questions well, they may not be an exact string match for the gold standard answers. To measure the extent of this underestimation, we adopt a simple exact-answer transformation method aiming at converting the well-answered predictions to exactly-matched predictions. The results show that after this transformation our run overall reaches the same level of performance as the best participating run and state-of-the-art F1 scores in three of five COVID-related events. Our code is publicly available to aid reproducibility",
+}
+```
+
+
 ### Changelog
+- 2021-03-10, update the paper from ACL Anthology
 - 2020-10-15, add fine-tuned t5-base model.
 
 ### Demo ([inference.py](inference.py))
@@ -131,14 +151,3 @@ python submit.py
 After this, the converted predictions are saved to `subs/val-run-1/`. We now have the runs ready for evaluation (the same as the test runs as mentioned in the [quick reproduction](#quick) section). 
 
 <a id="cite"></a>
-#### Citation
-```
-@misc{wang2020ucdcs,
-    title={UCD-CS at W-NUT 2020 Shared Task-3: A Text to Text Approach for COVID-19 Event Extraction on Social Media},
-    author={Congcong Wang and David Lillis},
-    year={2020},
-    eprint={2009.10047},
-    archivePrefix={arXiv},
-    primaryClass={cs.CL}
-}
-```
